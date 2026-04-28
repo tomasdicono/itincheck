@@ -9,6 +9,10 @@ const COL_VUELO = 5
 const COL_ESCALA = 7
 const COL_MATERIAL = 11
 
+/** Costo aprox.: horas extra totales × 3 × tarifa (ARS). */
+const ITC_COSTO_TARIFA_ARS = 48042.07
+const ITC_COSTO_FACTOR = 3
+
 /** ITC: aeropuertos no 24h. Horario inclusive por minuto (ETD HH:mm). */
 const ITC_VENTANAS: Record<string, { startMin: number; endMin: number }> = {
   /** 06:00 a 00:00 = hasta fin del día (23:59). */
@@ -45,6 +49,8 @@ export type ProgrammingReport = {
   /** Suma de todos los minutos extra ITC (misma suma que la fila de totales). */
   extrasItcTotalMinutos: number
   extrasItcTotalTexto: string
+  /** (extrasItcTotalMinutos / 60) × 3 × 48042,07 ARS */
+  extrasItcCostoAproxArs: number
   /** Ranking de escalas ITC por minutos extra generados (mayor primero). */
   rankingExtrasItcPorEscala: {
     posicion: number
@@ -341,6 +347,9 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     extrasPorEscalaYMes.set(row.escala, inner)
   }
 
+  const horasExtrasTotales = extrasItcTotalMinutos / 60
+  const extrasItcCostoAproxArs = horasExtrasTotales * ITC_COSTO_FACTOR * ITC_COSTO_TARIFA_ARS
+
   const escalasItc = Object.keys(ITC_VENTANAS).sort()
   const rankingExtrasItcPorEscala = escalasItc
     .map((escala) => {
@@ -392,6 +401,7 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     })),
     extrasItcTotalMinutos,
     extrasItcTotalTexto: formatDuracionMinutos(extrasItcTotalMinutos),
+    extrasItcCostoAproxArs,
     rankingExtrasItcPorEscala,
     equipamiento: { c320: n320, c321: n321, cotro: notro },
     simultaneidadMasCuatro,

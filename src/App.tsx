@@ -249,8 +249,8 @@ export default function App() {
                     Horas extra ITC
                   </h3>
                   <div className="mt-2 max-h-72 overflow-auto rounded-xl border border-[color:var(--color-line)]">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="sticky top-0 bg-[color:var(--color-surface)] text-[color:var(--color-muted)]">
+                    <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-[color:var(--color-surface)] text-[color:var(--color-muted)] shadow-[0_4px_12px_-2px_rgba(0,0,0,0.06)]">
                         <tr>
                           <th className="px-3 py-2 font-semibold">Fecha</th>
                           <th className="px-3 py-2 font-semibold">Escala</th>
@@ -281,13 +281,26 @@ export default function App() {
                           ))
                         )}
                       </tbody>
-                      <tfoot className="border-t-2 border-[color:var(--color-line)] bg-[color:var(--color-surface)] font-bold">
+                      <tfoot className="sticky bottom-0 z-20 bg-[color:var(--color-surface)] font-bold shadow-[0_-6px_16px_-4px_rgba(0,0,0,0.08)]">
                         <tr>
-                          <td colSpan={4} className="px-3 py-3">
+                          <td colSpan={4} className="border-t-2 border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-3">
                             Horas totales generadas
                           </td>
-                          <td className="px-3 py-3 font-semibold tabular-nums">
+                          <td className="border-t-2 border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-3 font-semibold tabular-nums">
                             {programmingReport.extrasItcTotalTexto}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={4} className="border-t border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-3">
+                            Costo aprox
+                          </td>
+                          <td className="border-t border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3 py-3 font-semibold tabular-nums">
+                            {new Intl.NumberFormat('es-AR', {
+                              style: 'currency',
+                              currency: 'ARS',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(programmingReport.extrasItcCostoAproxArs)}
                           </td>
                         </tr>
                       </tfoot>

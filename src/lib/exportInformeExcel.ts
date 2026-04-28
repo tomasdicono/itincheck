@@ -37,7 +37,7 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
     r.extrasTexto,
     r.extrasMinutos,
   ])
-  const itcFooter = [
+  const itcFooterHoras = [
     'Horas totales generadas',
     '',
     '',
@@ -45,8 +45,18 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
     report.extrasItcTotalTexto,
     report.extrasItcTotalMinutos,
   ]
+  const itcFooterCosto = [
+    'Costo aprox',
+    '',
+    '',
+    '',
+    Number(report.extrasItcCostoAproxArs.toFixed(2)),
+    '',
+  ]
   const wsItc = XLSX.utils.aoa_to_sheet(
-    itcBody.length ? [itcHeader, ...itcBody, itcFooter] : [itcHeader, ['—', '—', '—', '—', 'Sin registros', 0], itcFooter],
+    itcBody.length
+      ? [itcHeader, ...itcBody, itcFooterHoras, itcFooterCosto]
+      : [itcHeader, ['—', '—', '—', '—', 'Sin registros', 0], itcFooterHoras, itcFooterCosto],
   )
   XLSX.utils.book_append_sheet(wb, wsItc, 'Horas extra ITC')
 
