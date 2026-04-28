@@ -17,6 +17,12 @@ npm run build
 
 Salida en la carpeta `dist`.
 
+Comprobación de tipos (opcional, p. ej. en local o CI):
+
+```bash
+npm run typecheck
+```
+
 ## Vercel
 
 1. Creá el repositorio en GitHub (por ejemplo `itincheck`) y subí este código.
