@@ -327,6 +327,7 @@ export default function App() {
                               </th>
                             ))}
                             <th className="px-3 py-2 text-right font-semibold">Total extra</th>
+                            <th className="px-3 py-2 text-right font-semibold">Costo aprox</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -348,6 +349,14 @@ export default function App() {
                                 </td>
                               ))}
                               <td className="px-3 py-2 text-right font-semibold tabular-nums">{row.texto}</td>
+                              <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                                {new Intl.NumberFormat('es-AR', {
+                                  style: 'currency',
+                                  currency: 'ARS',
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }).format(row.costoAproxArs)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

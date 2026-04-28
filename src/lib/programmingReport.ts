@@ -61,6 +61,8 @@ export type ProgrammingReport = {
     extrasPorMesMinutos: number[]
     /** Horas decimales por mes (`extrasPorMesMinutos / 60`). */
     extrasPorMesHoras: number[]
+    /** (minutos / 60) × 3 × tarifa ARS, por escala. */
+    costoAproxArs: number
   }[]
   equipamiento: { c320: number; c321: number; cotro: number }
   /**
@@ -362,14 +364,18 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
       return { escala, minutos, extrasPorMesMinutos, extrasPorMesHoras }
     })
     .sort((a, b) => b.minutos - a.minutos || a.escala.localeCompare(b.escala))
-    .map((row, i) => ({
-      posicion: i + 1,
-      escala: row.escala,
-      minutos: row.minutos,
-      texto: formatDuracionMinutos(row.minutos),
-      extrasPorMesMinutos: row.extrasPorMesMinutos,
-      extrasPorMesHoras: row.extrasPorMesHoras,
-    }))
+    .map((row, i) => {
+      const horasEscala = row.minutos / 60
+      return {
+        posicion: i + 1,
+        escala: row.escala,
+        minutos: row.minutos,
+        texto: formatDuracionMinutos(row.minutos),
+        extrasPorMesMinutos: row.extrasPorMesMinutos,
+        extrasPorMesHoras: row.extrasPorMesHoras,
+        costoAproxArs: horasEscala * ITC_COSTO_FACTOR * ITC_COSTO_TARIFA_ARS,
+      }
+    })
 
   const simultaneidadMasCuatro = [...hourSlots.values()]
     .filter((s) => s.cantidad > 4)

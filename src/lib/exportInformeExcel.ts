@@ -61,13 +61,14 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
   XLSX.utils.book_append_sheet(wb, wsItc, 'Horas extra ITC')
 
   const mesHeaders = report.meses.map((m) => `${m.etiqueta} (h)`)
-  const rankingHeader = ['#', 'Escala', ...mesHeaders, 'Total extra', 'Total extra (min)']
+  const rankingHeader = ['#', 'Escala', ...mesHeaders, 'Total extra', 'Total extra (min)', 'Costo aprox (ARS)']
   const rankingRows = report.rankingExtrasItcPorEscala.map((r) => [
     r.posicion,
     r.escala,
     ...r.extrasPorMesHoras,
     r.texto,
     r.minutos,
+    Number(r.costoAproxArs.toFixed(2)),
   ])
   const wsRank = XLSX.utils.aoa_to_sheet([rankingHeader, ...rankingRows])
   XLSX.utils.book_append_sheet(wb, wsRank, 'Ranking ITC')
