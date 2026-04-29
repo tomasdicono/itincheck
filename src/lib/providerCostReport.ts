@@ -25,7 +25,7 @@ export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
 
-/** Descuento sobre la tarifa Rampa (incl. adicionales) si ETD 00:00–05:59; no aplica a REL/RES. */
+/** Descuento sobre la tarifa Rampa (incl. adicionales) si ETD 00:00–05:59 en vuelos DOM; no REL/RES ni inter. */
 export const RAMPA_DESCUENTO_MADRUGADA = 0.375
 
 const RAMPA_MADRUGADA_FIN_MIN = 5 * 60 + 59
@@ -213,7 +213,7 @@ export type RampaMonthLine = {
   otroDom: number
   otroInter: number
   relRes: number
-  /** Vuelos (no REL/RES) con ETD 00:00–05:59 y −37,5 % sobre tarifa + adicionales. */
+  /** Vuelos domésticos (no REL/RES) con ETD 00:00–05:59 y −37,5 % sobre tarifa + adicionales (inter sin desc.). */
   vuelosConDescuentoMadrugada: number
 }
 
@@ -429,7 +429,7 @@ type RampaBucketAgg = {
   escala: string
   mesIso: string
   mesEtiqueta: string
-  /** Suma USD por vuelo (tarifa + adicionales, con descuento madrugada si aplica). */
+  /** Suma USD por vuelo (tarifa + adicionales; desc. madrugada solo DOM). */
   totalUsdAccum: number
   dom320: number
   dom321: number
@@ -512,10 +512,11 @@ function rampaBumpBucket(
   }
 
   const madrugada = rampaEtdEnVentanaMadrugada(row[COL_ETD])
-  if (madrugada) {
+  const descMadrugadaDom = madrugada && !inter
+  if (descMadrugadaDom) {
     b.vuelosConDescuentoMadrugada += 1
   }
-  const factor = madrugada ? 1 - RAMPA_DESCUENTO_MADRUGADA : 1
+  const factor = descMadrugadaDom ? 1 - RAMPA_DESCUENTO_MADRUGADA : 1
   b.totalUsdAccum += Math.round(baseUsd * factor * 100) / 100
 }
 
@@ -559,7 +560,7 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
  * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE.
  * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
- * 00:00–05:59 (excepto REL/RES): −37,5 % sobre tarifa + adicionales.
+ * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
