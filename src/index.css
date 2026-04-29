@@ -1,13 +1,19 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --color-brand: #ff6900;
-  --color-brand-hover: #e55e00;
-  --color-ink: #0a0a0f;
-  --color-muted: #5c5c66;
-  --color-surface: #f7f7f8;
-  --color-line: #e8e8eb;
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --color-brand: #e6007e;
+  --color-brand-hover: #c4006a;
+  --color-brand-magenta: #e6007e;
+  --color-brand-purple: #5b0f6b;
+  --color-brand-mid: #8b1a5e;
+  --color-brand-glow: #fce4f0;
+  --color-ink: #14121a;
+  --color-muted: #5c5668;
+  --color-page: #ececf2;
+  --color-surface: #f3f3f8;
+  --color-table-head: #f0eef5;
+  --color-line: #e2e0ea;
 }
 
 html {
@@ -19,9 +25,19 @@ body {
   min-height: 100dvh;
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background: #fff;
+  background: var(--color-page);
 }
 
 #root {
   min-height: 100dvh;
+}
+
+.js-card {
+  box-shadow: 0 4px 24px -4px rgba(40, 10, 60, 0.08);
+}
+
+.js-input:focus {
+  outline: none;
+  border-color: var(--color-brand-magenta);
+  box-shadow: 0 0 0 3px rgba(230, 0, 126, 0.2);
 }

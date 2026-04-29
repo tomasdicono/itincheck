@@ -1,4 +1,4 @@
-import { format, isValid, parse, startOfDay } from 'date-fns'
+import { endOfDay, format, isValid, parse, parseISO, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { coerceToDate } from './dates'
 
@@ -82,6 +82,73 @@ export type ProgrammingReport = {
 function isHeaderRow(firstCell: unknown): boolean {
   const s = String(firstCell ?? '').trim().toUpperCase()
   return s.includes('EFFECTIVE') || s === 'FECHA' || s.includes('FROM')
+}
+
+/** Filtro global (fecha + IATA escala columna H) para vista previa e informe. */
+export type ProgrammingViewFilters = {
+  /** `yyyy-MM-dd` desde input type="date", o vacío */
+  dateFrom: string | null
+  dateTo: string | null
+  /** IATA en mayúsculas; vacío = todas las escalas */
+  airportsIata: string[]
+}
+
+export function hasActiveProgrammingFilters(f: ProgrammingViewFilters): boolean {
+  return Boolean(f.dateFrom || f.dateTo || f.airportsIata.length > 0)
+}
+
+export function getProgrammingMatrixDataStartRow(rawMatrix: unknown[][]): number {
+  if (!rawMatrix.length) return 0
+  return isHeaderRow(rawMatrix[0]?.[COL_FECHA]) ? 1 : 0
+}
+
+export function matchesProgrammingFilters(row: unknown[], f: ProgrammingViewFilters): boolean {
+  const opDate = parseOperationDate(row[COL_FECHA])
+  if (!opDate) return false
+  if (f.dateFrom) {
+    const from = startOfDay(parseISO(f.dateFrom))
+    if (opDate < from) return false
+  }
+  if (f.dateTo) {
+    const to = endOfDay(parseISO(f.dateTo))
+    if (opDate > to) return false
+  }
+  if (f.airportsIata.length > 0) {
+    const escala = normalizeEscala(row[COL_ESCALA])
+    if (escala === '—' || !f.airportsIata.includes(escala)) return false
+  }
+  return true
+}
+
+/**
+ * Conserva filas de encabezado iniciales y solo incluye filas de datos que cumplan el filtro.
+ */
+export function filterProgrammingRawMatrix(
+  raw: unknown[][],
+  f: ProgrammingViewFilters | undefined,
+): unknown[][] {
+  if (!raw.length) return raw
+  if (!f || !hasActiveProgrammingFilters(f)) return raw
+  const startRow = getProgrammingMatrixDataStartRow(raw)
+  const head = raw.slice(0, startRow)
+  const out: unknown[][] = [...head]
+  for (let r = startRow; r < raw.length; r++) {
+    const row = raw[r]
+    if (!row?.length) continue
+    if (matchesProgrammingFilters(row, f)) out.push(row)
+  }
+  return out
+}
+
+export function collectAirportsFromProgrammingMatrix(raw: unknown[][]): string[] {
+  if (!raw.length) return []
+  const startRow = getProgrammingMatrixDataStartRow(raw)
+  const set = new Set<string>()
+  for (let r = startRow; r < raw.length; r++) {
+    const e = normalizeEscala(raw[r]?.[COL_ESCALA])
+    if (e && e !== '—') set.add(e)
+  }
+  return [...set].sort((a, b) => a.localeCompare(b))
 }
 
 function parseOperationDate(value: unknown): Date | null {
