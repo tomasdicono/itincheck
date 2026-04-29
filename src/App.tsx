@@ -219,37 +219,48 @@ export default function App() {
                 </div>
 
                 <div className="mt-5">
-                  <label className="flex flex-col gap-1.5" htmlFor="filter-airports">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--color-muted)]">
-                      Escala (IATA)
+                  <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--color-muted)]">
+                    Escala (IATA)
+                  </span>
+                  {airportsInFile.length === 0 ? (
+                    <span className="mt-2 block text-sm text-[color:var(--color-muted)]">
+                      No se detectaron escalas en los datos.
                     </span>
-                    <span className="text-xs text-[color:var(--color-muted)]">
-                      Lista múltiple: sin ninguna seleccionada se usan todas. En Windows/Linux mantené Ctrl para elegir
-                      varias; en Mac, Cmd.
-                    </span>
-                    {airportsInFile.length === 0 ? (
-                      <span className="mt-2 text-sm text-[color:var(--color-muted)]">
-                        No se detectaron escalas en los datos.
-                      </span>
-                    ) : (
-                      <select
-                        id="filter-airports"
-                        multiple
-                        size={Math.min(14, Math.max(5, airportsInFile.length))}
-                        value={selectedAirports}
-                        onChange={(e) => {
-                          setSelectedAirports([...e.target.selectedOptions].map((o) => o.value))
-                        }}
-                        className="js-input mt-2 max-w-md rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)] px-2 py-2 font-mono text-sm font-semibold text-[color:var(--color-ink)]"
-                      >
-                        {airportsInFile.map((code) => (
-                          <option key={code} value={code}>
-                            {code}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </label>
+                  ) : (
+                    <details className="mt-2 max-w-md rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)] [&_summary::-webkit-details-marker]:hidden">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-[color:var(--color-ink)] transition hover:bg-white/80">
+                        <span className="min-w-0 truncate font-mono text-xs font-semibold sm:text-sm">
+                          {selectedAirports.length === 0
+                            ? 'Todas las escalas'
+                            : `${selectedAirports.length} · ${[...selectedAirports].sort((a, b) => a.localeCompare(b)).join(', ')}`}
+                        </span>
+                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[color:var(--color-brand-celeste-muted)]">
+                          Desplegar
+                        </span>
+                      </summary>
+                      <div className="border-t border-[color:var(--color-line)] px-2 pb-2 pt-1">
+                        <p className="px-1 pb-2 text-xs text-[color:var(--color-muted)]">
+                          Sin selección = todas. Ctrl (Windows/Linux) o Cmd (Mac) para elegir varias.
+                        </p>
+                        <select
+                          id="filter-airports"
+                          multiple
+                          size={Math.min(10, Math.max(4, airportsInFile.length))}
+                          value={selectedAirports}
+                          onChange={(e) => {
+                            setSelectedAirports([...e.target.selectedOptions].map((o) => o.value))
+                          }}
+                          className="js-input w-full rounded-lg border border-[color:var(--color-line)] bg-white px-2 py-1.5 font-mono text-sm font-semibold text-[color:var(--color-ink)]"
+                        >
+                          {airportsInFile.map((code) => (
+                            <option key={code} value={code}>
+                              {code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </details>
+                  )}
                 </div>
 
                 {filtersActive ? (
