@@ -8,6 +8,7 @@ import {
   COST_REPORT_AIRPORTS,
   FLYSEG_SILLA_RUEDAS_UNITARIO_ARS,
   FLYSEG_SILLAS_RUEDAS_POR_VUELO,
+  NFS_CRD_MATERIALES_POR_VUELO_ARS,
   RAMPA_ADICIONALES_USD,
   RAMPA_DESCUENTO_MADRUGADA,
   RAMPA_DOM_320_USD,
@@ -120,11 +121,19 @@ export function CostAnalysisTab({
           Se consideran solo las escalas: <span className="font-mono font-bold text-[color:var(--color-ink)]">{COST_REPORT_AIRPORTS.join(', ')}</span>.
         </p>
         <p className="mt-2">
-          <strong>FlySeg</strong> (resto de escalas): el total del mes es la suma por franjas de días{' '}
-          <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y <strong>22–31</strong>, con la tarifa
-          unitaria según los vuelos de cada franja, más <strong>sillas de ruedas</strong> (
-          {FLYSEG_SILLAS_RUEDAS_POR_VUELO} por vuelo × ${FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}). Las columnas
-          de promedio semanal y precio unitario (ref.) son solo orientativas para el tramo de tarifas.
+          <strong>FlySeg</strong> (escalas del informe salvo AEP, EZE y <strong>CRD</strong>): el total del mes es la suma
+          por franjas de días <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y{' '}
+          <strong>22–31</strong>, con la tarifa unitaria según los vuelos de cada franja, más{' '}
+          <strong>sillas de ruedas</strong> ({FLYSEG_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
+          {FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}). Las columnas de promedio semanal y precio unitario
+          (ref.) son solo orientativas para el tramo de tarifas FlySeg.
+        </p>
+        <p className="mt-2">
+          <strong>Costos NFS (solo CRD):</strong> la tarifa por pasada depende del promedio de vuelos por semana del mes
+          (redondeado): 1 → $673.320; 2 → $488.700; 3 → $434.400; 4 → $407.250; 5–7 → $380.100; 8–14 → $325.800; 15 o más
+          → $271.500 ARS por vuelo. Se suman <strong>${NFS_CRD_MATERIALES_POR_VUELO_ARS.toLocaleString('es-AR')}</strong>{' '}
+          por vuelo en materiales y las mismas <strong>sillas de ruedas</strong> que FlySeg (
+          {FLYSEG_SILLAS_RUEDAS_POR_VUELO} × ${FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
         </p>
         <p className="mt-2">
           <strong>Swissport</strong> (AEP y EZE): se factura por <strong>cantidad de vuelos del mes</strong> según
@@ -154,7 +163,8 @@ export function CostAnalysisTab({
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos FlySeg</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          Escalas permitidas excepto AEP y EZE. Por cada mes: tarifas por franja, sillas de ruedas y total.
+          Escalas del informe excepto AEP, EZE y CRD (CRD se muestra en Costos NFS). Por cada mes: tarifas por franja,
+          sillas de ruedas y total.
         </p>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
@@ -257,6 +267,138 @@ export function CostAnalysisTab({
                   </td>
                   <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
                     <DualMoneyTotal value={report.flySegTotalArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos NFS</h3>
+        <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+          Solo escala <strong className="font-mono">CRD</strong>: tarifa por pasada según vuelos semanales del mes
+          (promedio redondeado), materiales ${NFS_CRD_MATERIALES_POR_VUELO_ARS.toLocaleString('es-AR')} por vuelo y sillas
+          de ruedas (mismo criterio FlySeg).
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
+              <tr>
+                <th className="px-3 py-2.5 font-bold">Escala</th>
+                <th className="px-3 py-2.5 font-bold">Mes</th>
+                <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Prom. vuelos/sem.</th>
+                <th className="px-3 py-2.5 font-bold">Tramo tarifa</th>
+                <th className="px-3 py-2.5 text-right font-bold">Precio pasada ARS·USD</th>
+                <th className="px-3 py-2.5 text-right font-bold">Importe ARS·USD</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.nfsLines.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                    No hay vuelos en CRD con los datos y filtros actuales.
+                  </td>
+                </tr>
+              ) : (
+                report.nfsLines.map((row) => (
+                  <Fragment key={`nfs-${row.mesIso}`}>
+                    <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                      <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
+                      <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {row.vuelosTotalMes.toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                        {dec2.format(row.promedioVuelosPorSemanaRef)}
+                        <span className="block text-[10px]">
+                          (ref. {row.vuelosSemanalesTarifaRef.toLocaleString('es-AR')} /sem.)
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs font-semibold text-[color:var(--color-ink)]">
+                        {row.tramoTarifaEtiqueta}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                        {money(row.precioUnitarioPasadaArs)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold tabular-nums">{money(row.costoPasadasArs)}</td>
+                    </tr>
+                    <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                      <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
+                      <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {row.vuelosTotalMes.toLocaleString('es-AR')}
+                      </td>
+                      <td colSpan={3} className="px-3 py-2 text-xs text-[color:var(--color-muted)]">
+                        Materiales NFS · ${NFS_CRD_MATERIALES_POR_VUELO_ARS.toLocaleString('es-AR')} ×{' '}
+                        {row.vuelosTotalMes.toLocaleString('es-AR')} vuelos
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(row.costoMaterialesArs)}</td>
+                    </tr>
+                    <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                      <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
+                      <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {row.vuelosTotalMes.toLocaleString('es-AR')}
+                      </td>
+                      <td colSpan={3} className="px-3 py-2 text-xs text-[color:var(--color-muted)]">
+                        Sillas de ruedas · {FLYSEG_SILLAS_RUEDAS_POR_VUELO} × $
+                        {FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')} ×{' '}
+                        {row.vuelosTotalMes.toLocaleString('es-AR')} vuelos
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(row.costoSillasRuedasArs)}</td>
+                    </tr>
+                    <tr className="border-t border-[color:var(--color-line)] bg-[color:var(--color-table-head)]/50 font-bold">
+                      <td className="px-3 py-2 font-mono">{row.escala}</td>
+                      <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.vuelosTotalMes.toLocaleString('es-AR')}
+                      </td>
+                      <td colSpan={3} className="px-3 py-2 text-right text-[color:var(--color-muted)]">
+                        Total mes
+                      </td>
+                      <td className="px-3 py-2 text-right align-top">
+                        <DualMoneyTotal value={row.costoTotalMesArs} arsPerUsd={arsPerUsd} />
+                      </td>
+                    </tr>
+                  </Fragment>
+                ))
+              )}
+            </tbody>
+            {report.nfsLines.length > 0 ? (
+              <tfoot className="bg-[color:var(--color-table-head)] font-bold">
+                <tr>
+                  <td colSpan={6} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
+                    Total pasadas (NFS)
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.nfsTotalPasadasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total materiales
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.nfsTotalMaterialesArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total sillas de ruedas
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.nfsTotalSillasRuedasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="border-t border-[color:var(--color-line)] px-3 py-3 font-black">
+                    Total NFS (CRD)
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
+                    <DualMoneyTotal value={report.nfsTotalArs} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>
               </tfoot>

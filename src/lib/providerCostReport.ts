@@ -56,6 +56,9 @@ export const SWISSPORT_SILLAS_RUEDAS_POR_VUELO = 2
 /** Sillas de ruedas: ARS unitario (FlySeg, escalas fuera de AEP/EZE). */
 export const FLYSEG_SILLA_RUEDAS_UNITARIO_ARS = 55_418
 
+/** CRD (proveedor NFS): materiales fijos por vuelo (ARS). */
+export const NFS_CRD_MATERIALES_POR_VUELO_ARS = 32_580
+
 /** Sillas de ruedas: ARS unitario (Swissport AEP/EZE). */
 export const SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS = 60_300
 
@@ -183,6 +186,24 @@ export type ProviderCostLine = {
   costoTotalMesRealArs: number | null
 }
 
+/** CRD (NFS): tarifa por pasada según vuelos semanales (promedio del mes, redondeado). */
+export type NfsMonthLine = {
+  escala: 'CRD'
+  mesIso: string
+  mesEtiqueta: string
+  vuelosTotalMes: number
+  promedioVuelosPorSemanaRef: number
+  /** Promedio semanal redondeado usado para elegir tramo de tarifa. */
+  vuelosSemanalesTarifaRef: number
+  /** Etiqueta del tramo (p. ej. «5–7 / semana»). */
+  tramoTarifaEtiqueta: string
+  precioUnitarioPasadaArs: number | null
+  costoPasadasArs: number | null
+  costoMaterialesArs: number
+  costoSillasRuedasArs: number
+  costoTotalMesArs: number | null
+}
+
 /** Un mes en AEP o EZE con desglose Swissport. */
 export type SwissportMonthBlock = {
   escala: 'AEP' | 'EZE'
@@ -229,6 +250,12 @@ export type ProviderCostReport = {
   flySegTotalSillasRuedasArs: number
   /** Suma de pasadas + sillas (mismo criterio que el pie de tabla en 3 filas). */
   flySegTotalArs: number
+  /** CRD (NFS): tarifa por vuelos semanales + materiales + sillas (mismo WCH que FlySeg). */
+  nfsLines: NfsMonthLine[]
+  nfsTotalPasadasArs: number
+  nfsTotalMaterialesArs: number
+  nfsTotalSillasRuedasArs: number
+  nfsTotalArs: number
   swissportBlocks: SwissportMonthBlock[]
   swissportTotalPasadasArs: number
   swissportTotalSimultaneidadArs: number
@@ -318,6 +345,88 @@ function rollupToMonthLines(
     if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
     return a.mesIso.localeCompare(b.mesIso)
   })
+  return lines
+}
+
+/**
+ * Tarifa ARS por pasada (CRD / NFS) según vuelos por semana (valor entero, típicamente el promedio mensual redondeado).
+ * Tramo ≥15: tarifa mínima (equivalente a «más de 14 por semana» en la grilla comercial).
+ */
+function nfsCrdPasadaArsForWeeklyRounded(weeklyRounded: number): { unit: number; label: string } {
+  if (weeklyRounded <= 0) return { unit: 0, label: '—' }
+  if (weeklyRounded === 1) return { unit: 673_320, label: '1 / semana' }
+  if (weeklyRounded === 2) return { unit: 488_700, label: '2 / semana' }
+  if (weeklyRounded === 3) return { unit: 434_400, label: '3 / semana' }
+  if (weeklyRounded === 4) return { unit: 407_250, label: '4 / semana' }
+  if (weeklyRounded <= 7) return { unit: 380_100, label: '5–7 / semana' }
+  if (weeklyRounded <= 14) return { unit: 325_800, label: '8–14 / semana' }
+  return { unit: 271_500, label: '≥15 / semana' }
+}
+
+function rollupNfsCrdToMonthLines(
+  periodMap: Map<PeriodAggKey, PeriodCell>,
+  withPricing: boolean,
+): NfsMonthLine[] {
+  const monthBuckets = new Map<
+    string,
+    { mesIso: string; mesEtiqueta: string; counts: [number, number, number, number] }
+  >()
+
+  for (const v of periodMap.values()) {
+    if (v.escala !== 'CRD') continue
+    const mk = v.mesIso
+    let b = monthBuckets.get(mk)
+    if (!b) {
+      b = { mesIso: v.mesIso, mesEtiqueta: v.mesEtiqueta, counts: [0, 0, 0, 0] }
+      monthBuckets.set(mk, b)
+    }
+    b.counts[v.periodo - 1] = v.n
+  }
+
+  const lines: NfsMonthLine[] = []
+  for (const b of monthBuckets.values()) {
+    const [c1, c2, c3, c4] = b.counts
+    const vuelosTotalMes = c1 + c2 + c3 + c4
+    const dim = getDaysInMonth(parseISO(`${b.mesIso}-01`))
+    const promedioVuelosPorSemanaRef = dim > 0 ? (vuelosTotalMes * 7) / dim : 0
+    const weeklyRef =
+      vuelosTotalMes === 0 ? 0 : Math.max(1, Math.round(promedioVuelosPorSemanaRef))
+    const { unit, label } = nfsCrdPasadaArsForWeeklyRounded(weeklyRef)
+
+    const precioUnitarioPasadaArs =
+      withPricing && vuelosTotalMes > 0 ? unit : null
+    const costoPasadasArs =
+      withPricing && vuelosTotalMes > 0 ? Math.round(vuelosTotalMes * unit * 100) / 100 : null
+    const costoMaterialesArs =
+      withPricing && vuelosTotalMes > 0
+        ? Math.round(vuelosTotalMes * NFS_CRD_MATERIALES_POR_VUELO_ARS * 100) / 100
+        : 0
+    const costoSillasRuedasArs =
+      withPricing && vuelosTotalMes > 0
+        ? Math.round(vuelosTotalMes * FLYSEG_SILLAS_RUEDAS_POR_VUELO * FLYSEG_SILLA_RUEDAS_UNITARIO_ARS * 100) / 100
+        : 0
+    const costoTotalMesArs =
+      costoPasadasArs != null
+        ? Math.round((costoPasadasArs + costoMaterialesArs + costoSillasRuedasArs) * 100) / 100
+        : null
+
+    lines.push({
+      escala: 'CRD',
+      mesIso: b.mesIso,
+      mesEtiqueta: b.mesEtiqueta,
+      vuelosTotalMes,
+      promedioVuelosPorSemanaRef: Math.round(promedioVuelosPorSemanaRef * 100) / 100,
+      vuelosSemanalesTarifaRef: weeklyRef,
+      tramoTarifaEtiqueta: label,
+      precioUnitarioPasadaArs,
+      costoPasadasArs,
+      costoMaterialesArs,
+      costoSillasRuedasArs,
+      costoTotalMesArs,
+    })
+  }
+
+  lines.sort((a, b) => a.mesIso.localeCompare(b.mesIso))
   return lines
 }
 
@@ -619,12 +728,14 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
  * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
  * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
- * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE.
+ * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE. CRD no entra en FlySeg:
+ * va a NFS (tarifa por vuelos semanales + materiales + mismas sillas WCH que FlySeg).
  * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
  * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
+  const nfsCrdPeriodMap = new Map<PeriodAggKey, PeriodCell>()
   const swissBuckets = new Map<SwissBucketKey, SwissBucket>()
   const swissFlightLists = new Map<SwissBucketKey, SwissFlightDetail[]>()
   const rampaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
@@ -670,6 +781,14 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     }
 
     const periodo = monthDayPeriod(opDate)
+    if (escala === 'CRD') {
+      const keyNfs: PeriodAggKey = `${escala}|${mesIso}|${periodo}`
+      const prevNfs = nfsCrdPeriodMap.get(keyNfs)
+      if (prevNfs) prevNfs.n += 1
+      else nfsCrdPeriodMap.set(keyNfs, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
+      continue
+    }
+
     const key: PeriodAggKey = `${escala}|${mesIso}|${periodo}`
     const prev = flySegPeriodMap.get(key)
     if (prev) prev.n += 1
@@ -677,6 +796,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   }
 
   const flySeg = rollupToMonthLines(flySegPeriodMap, true)
+  const nfsLines = rollupNfsCrdToMonthLines(nfsCrdPeriodMap, true)
   const swissportBlocks = buildSwissportBlocksFromBuckets(swissBuckets, swissFlightLists)
 
   const flySegTotalPasadasArs = Math.round(
@@ -687,6 +807,12 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   ) / 100
   const flySegTotalArs =
     Math.round((flySegTotalPasadasArs + flySegTotalSillasRuedasArs) * 100) / 100
+
+  const nfsTotalPasadasArs = Math.round(nfsLines.reduce((s, l) => s + (l.costoPasadasArs ?? 0), 0) * 100) / 100
+  const nfsTotalMaterialesArs = Math.round(nfsLines.reduce((s, l) => s + l.costoMaterialesArs, 0) * 100) / 100
+  const nfsTotalSillasRuedasArs = Math.round(nfsLines.reduce((s, l) => s + l.costoSillasRuedasArs, 0) * 100) / 100
+  const nfsTotalArs =
+    Math.round((nfsTotalPasadasArs + nfsTotalMaterialesArs + nfsTotalSillasRuedasArs) * 100) / 100
 
   const swissportTotalPasadasArs = Math.round(
     swissportBlocks.reduce((s, b) => s + b.costoPasadasArs, 0) * 100,
@@ -723,6 +849,11 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     flySegTotalPasadasArs,
     flySegTotalSillasRuedasArs,
     flySegTotalArs,
+    nfsLines,
+    nfsTotalPasadasArs,
+    nfsTotalMaterialesArs,
+    nfsTotalSillasRuedasArs,
+    nfsTotalArs,
     swissportBlocks,
     swissportTotalPasadasArs,
     swissportTotalSimultaneidadArs,
