@@ -87,7 +87,7 @@ export default function App() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-[color:var(--color-page)] text-[color:var(--color-ink)]">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-gradient-to-r from-[color:var(--color-brand-purple)] via-[color:var(--color-brand-mid)] to-[color:var(--color-brand-magenta)] text-white shadow-[0_8px_32px_rgba(90,0,80,0.25)]">
+      <header className="sticky top-0 z-30 border-b border-white/15 bg-gradient-to-r from-[color:var(--color-brand-navy)] via-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-[0_8px_28px_rgba(0,55,75,0.28)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
           <div className="flex items-center gap-3">
             <div
@@ -129,8 +129,8 @@ export default function App() {
             onClick={() => document.getElementById('file-input')?.click()}
             className={`js-card flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition ${
               drag
-                ? 'border-[color:var(--color-brand-magenta)] bg-[color:var(--color-brand-glow)]'
-                : 'border-[color:var(--color-line)] bg-white hover:border-[color:var(--color-brand-magenta)]/40'
+                ? 'border-[color:var(--color-brand-celeste)] bg-[color:var(--color-brand-glow)]'
+                : 'border-[color:var(--color-line)] bg-white hover:border-[color:var(--color-brand-celeste)]/45'
             }`}
           >
             <input
@@ -186,7 +186,7 @@ export default function App() {
                     type="button"
                     onClick={clearFilters}
                     disabled={!filtersActive}
-                    className="shrink-0 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-page)] px-4 py-2.5 text-sm font-bold text-[color:var(--color-ink)] transition enabled:hover:border-[color:var(--color-brand-magenta)]/50 enabled:hover:bg-[color:var(--color-brand-glow)] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="shrink-0 rounded-full border border-[color:var(--color-line)] bg-[color:var(--color-page)] px-4 py-2.5 text-sm font-bold text-[color:var(--color-ink)] transition enabled:hover:border-[color:var(--color-brand-celeste)]/55 enabled:hover:bg-[color:var(--color-brand-glow)] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Limpiar filtros
                   </button>
@@ -237,8 +237,8 @@ export default function App() {
                             onClick={() => toggleAirport(code)}
                             className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
                               on
-                                ? 'bg-gradient-to-r from-[color:var(--color-brand-purple)] to-[color:var(--color-brand-magenta)] text-white shadow-sm'
-                                : 'bg-white text-[color:var(--color-ink)] ring-1 ring-[color:var(--color-line)] hover:ring-[color:var(--color-brand-magenta)]/40'
+                                ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                                : 'bg-white text-[color:var(--color-ink)] ring-1 ring-[color:var(--color-line)] hover:ring-[color:var(--color-brand-celeste)]/45'
                             }`}
                           >
                             {code}
@@ -250,7 +250,7 @@ export default function App() {
                 </div>
 
                 {filtersActive ? (
-                  <p className="mt-4 text-sm font-semibold text-[color:var(--color-brand-magenta)]">
+                  <p className="mt-4 text-sm font-semibold text-[color:var(--color-brand-celeste-muted)]">
                     Mostrando {filteredPreviewRows.length.toLocaleString('es-AR')} de{' '}
                     {rows.length.toLocaleString('es-AR')} filas · informe recalculado con el mismo criterio.
                   </p>
@@ -298,13 +298,13 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => downloadInformeExcel(programmingReport, fileName)}
-                    className="shrink-0 rounded-full bg-gradient-to-r from-[color:var(--color-brand-purple)] to-[color:var(--color-brand-magenta)] px-5 py-2.5 text-sm font-black text-white shadow-md transition hover:brightness-110"
+                    className="shrink-0 rounded-full bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] px-5 py-2.5 text-sm font-black text-white shadow-md transition hover:brightness-105"
                   >
                     Descargar Excel
                   </button>
                 </div>
                 <div className="mt-6">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-magenta)]">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                     Por escala y por mes
                   </h3>
                   <div className="mt-2 max-h-80 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
@@ -345,7 +345,7 @@ export default function App() {
                 </div>
 
                 <div className="mt-8">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-magenta)]">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                     Vuelos en mismo minuto
                   </h3>
                   <div className="mt-2 max-h-72 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
@@ -386,7 +386,7 @@ export default function App() {
                 </div>
 
                 <div className="mt-8">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-magenta)]">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                     Horas extra ITC
                   </h3>
                   <div className="mt-2 max-h-72 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
@@ -506,7 +506,7 @@ export default function App() {
 
                 <div className="mt-8">
                   <div className="rounded-2xl border border-[color:var(--color-line)] bg-gradient-to-br from-[color:var(--color-page)] to-white p-4 md:max-w-md">
-                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-magenta)]">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                       Equipamiento
                     </h3>
                     <ul className="mt-3 space-y-2 text-sm font-semibold">
@@ -533,7 +533,7 @@ export default function App() {
                 </div>
 
                 <div className="mt-8">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-magenta)]">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                     Simultaneidad alta
                   </h3>
                   <div className="mt-2 max-h-80 overflow-auto rounded-2xl border border-[color:var(--color-line)]">

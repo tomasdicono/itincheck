@@ -1,19 +1,21 @@
 @import 'tailwindcss';
 
+/* Paleta alineada a JetSMART: celeste (#00c2e8) + azul marino de cabecera */
 @theme {
   --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --color-brand: #e6007e;
-  --color-brand-hover: #c4006a;
-  --color-brand-magenta: #e6007e;
-  --color-brand-purple: #5b0f6b;
-  --color-brand-mid: #8b1a5e;
-  --color-brand-glow: #fce4f0;
-  --color-ink: #14121a;
-  --color-muted: #5c5668;
-  --color-page: #ececf2;
-  --color-surface: #f3f3f8;
-  --color-table-head: #f0eef5;
-  --color-line: #e2e0ea;
+  --color-brand: #00c2e8;
+  --color-brand-hover: #00a8cb;
+  --color-brand-celeste: #00c2e8;
+  --color-brand-celeste-muted: #0099b8;
+  --color-brand-navy: #003547;
+  --color-brand-teal: #006580;
+  --color-brand-glow: #d4f2fb;
+  --color-ink: #0f1b24;
+  --color-muted: #4a5f6c;
+  --color-page: #e8f3f8;
+  --color-surface: #eef7fb;
+  --color-table-head: #e0f1f8;
+  --color-line: #c5dfea;
 }
 
 html {
@@ -33,11 +35,11 @@ body {
 }
 
 .js-card {
-  box-shadow: 0 4px 24px -4px rgba(40, 10, 60, 0.08);
+  box-shadow: 0 4px 24px -4px rgba(0, 55, 75, 0.1);
 }
 
 .js-input:focus {
   outline: none;
-  border-color: var(--color-brand-magenta);
-  box-shadow: 0 0 0 3px rgba(230, 0, 126, 0.2);
+  border-color: var(--color-brand-celeste);
+  box-shadow: 0 0 0 3px rgba(0, 194, 232, 0.22);
 }
