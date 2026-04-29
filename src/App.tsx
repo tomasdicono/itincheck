@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
+import { useBcraValuacionUsd } from './hooks/useBcraValuacionUsd'
 import { downloadInformeExcel } from './lib/exportInformeExcel'
+import { formatArsWithUsd } from './lib/formatDualCurrency'
 import { parseExcelFile } from './lib/parseExcel'
 import { buildProviderCostReport } from './lib/providerCostReport'
 import {
@@ -14,6 +16,8 @@ import {
 } from './lib/programmingReport'
 
 export default function App() {
+  const bcra = useBcraValuacionUsd()
+
   const [fileName, setFileName] = useState<string | null>(null)
   const [headers, setHeaders] = useState<string[]>([])
   const [rows, setRows] = useState<Record<string, unknown>[]>([])
@@ -453,6 +457,18 @@ export default function App() {
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
                     Horas extra ITC
                   </h3>
+                  {bcra.loading ? (
+                    <p className="mt-2 text-xs text-[color:var(--color-muted)]">Cargando cotización BCRA para USD…</p>
+                  ) : bcra.quote ? (
+                    <p className="mt-2 text-xs text-[color:var(--color-muted)]">
+                      Costos en ARS con equivalente USD (valuación BCRA al {bcra.quote.date.split('-').reverse().join('/')}
+                      ).
+                    </p>
+                  ) : bcra.error ? (
+                    <p className="mt-2 text-xs text-[color:var(--color-muted)]">
+                      No se pudo cargar la cotización BCRA; solo ARS. ({bcra.error})
+                    </p>
+                  ) : null}
                   <div className="mt-2 max-h-72 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
                     <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
                       <thead className="sticky top-0 z-10 bg-[color:var(--color-table-head)] text-[color:var(--color-muted)] shadow-[0_4px_12px_-2px_rgba(0,0,0,0.06)]">
@@ -500,12 +516,7 @@ export default function App() {
                             Costo aprox
                           </td>
                           <td className="border-t border-[color:var(--color-line)] px-3 py-3 font-semibold tabular-nums">
-                            {new Intl.NumberFormat('es-AR', {
-                              style: 'currency',
-                              currency: 'ARS',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }).format(programmingReport.extrasItcCostoAproxArs)}
+                            {formatArsWithUsd(programmingReport.extrasItcCostoAproxArs, bcra.arsPerUsd)}
                           </td>
                         </tr>
                       </tfoot>
@@ -553,12 +564,7 @@ export default function App() {
                               ))}
                               <td className="px-3 py-2 text-right font-bold tabular-nums">{row.texto}</td>
                               <td className="px-3 py-2 text-right font-bold tabular-nums">
-                                {new Intl.NumberFormat('es-AR', {
-                                  style: 'currency',
-                                  currency: 'ARS',
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }).format(row.costoAproxArs)}
+                                {formatArsWithUsd(row.costoAproxArs, bcra.arsPerUsd)}
                               </td>
                             </tr>
                           ))}
@@ -648,7 +654,13 @@ export default function App() {
 
                 {mainTab === 'costos' && (
                   <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
-                    <CostAnalysisTab report={providerCostReport} />
+                    <CostAnalysisTab
+                      report={providerCostReport}
+                      arsPerUsd={bcra.arsPerUsd}
+                      tcLoading={bcra.loading}
+                      tcError={bcra.error}
+                      tcQuoteDateIso={bcra.quote?.date ?? null}
+                    />
                   </section>
                 )}
               </>

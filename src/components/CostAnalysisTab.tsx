@@ -1,28 +1,56 @@
 import { Fragment } from 'react'
+import { formatArsWithUsd } from '../lib/formatDualCurrency'
 import type { ProviderCostReport } from '../lib/providerCostReport'
 import { COST_REPORT_AIRPORTS } from '../lib/providerCostReport'
-
-const ars = new Intl.NumberFormat('es-AR', {
-  style: 'currency',
-  currency: 'ARS',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
 
 const dec2 = new Intl.NumberFormat('es-AR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
 
-function money(n: number | null): string {
-  if (n == null) return '—'
-  return ars.format(n)
+function formatIsoToAr(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
 }
 
-export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
+export function CostAnalysisTab({
+  report,
+  arsPerUsd,
+  tcLoading,
+  tcError,
+  tcQuoteDateIso,
+}: {
+  report: ProviderCostReport
+  arsPerUsd: number | null
+  tcLoading: boolean
+  tcError: string | null
+  tcQuoteDateIso: string | null
+}) {
+  const money = (n: number | null) => formatArsWithUsd(n, arsPerUsd)
+
   return (
     <div className="flex flex-col gap-10">
       <h2 className="text-xl font-black tracking-tight text-[color:var(--color-ink)]">Análisis de costos</h2>
+
+      <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-brand-glow)]/40 p-4 text-sm text-[color:var(--color-ink)]">
+        {tcLoading ? (
+          <p className="font-semibold">Consultando tipo de cambio de valuación BCRA (datos.gob.ar)…</p>
+        ) : tcError ? (
+          <p>
+            <span className="font-semibold">Cotización USD:</span> no disponible ({tcError}). Se muestran solo
+            importes en pesos.
+          </p>
+        ) : arsPerUsd != null && tcQuoteDateIso ? (
+          <p>
+            <span className="font-semibold">Equivalente en USD:</span> tipo de cambio de valuación del BCRA, serie
+            pública vía datos.gob.ar, última observación al {formatIsoToAr(tcQuoteDateIso)} (
+            {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 4 })} ARS/USD).
+          </p>
+        ) : (
+          <p className="text-[color:var(--color-muted)]">Sin cotización para mostrar equivalentes en USD.</p>
+        )}
+      </div>
 
       <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/60 p-4 text-sm text-[color:var(--color-muted)]">
         <p className="font-semibold text-[color:var(--color-ink)]">Criterio de facturación</p>
@@ -58,8 +86,8 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
                 <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
                 <th className="px-3 py-2.5 text-right font-bold">Prom. vuelos/sem. (ref.)</th>
                 <th className="px-3 py-2.5 text-right font-bold">Tramo ref. (≤60)</th>
-                <th className="px-3 py-2.5 text-right font-bold">Precio unit. (ref.)</th>
-                <th className="px-3 py-2.5 text-right font-bold">Costo total mes (real)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Precio unit. (ref.) ARS·USD</th>
+                <th className="px-3 py-2.5 text-right font-bold">Costo total mes (real) ARS·USD</th>
               </tr>
             </thead>
             <tbody>
@@ -124,7 +152,7 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
                 <th className="px-3 py-2.5 font-bold">Concepto</th>
                 <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
                 <th className="px-3 py-2.5 font-bold">Detalle</th>
-                <th className="px-3 py-2.5 text-right font-bold">Importe (ARS)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Importe (ARS · USD)</th>
               </tr>
             </thead>
             <tbody>
