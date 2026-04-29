@@ -85,12 +85,6 @@ export default function App() {
     setSelectedAirports([])
   }, [])
 
-  const toggleAirport = useCallback((iata: string) => {
-    setSelectedAirports((prev) =>
-      prev.includes(iata) ? prev.filter((x) => x !== iata) : [...prev, iata],
-    )
-  }, [])
-
   return (
     <div className="min-h-dvh flex flex-col bg-[color:var(--color-page)] text-[color:var(--color-ink)]">
       <header className="sticky top-0 z-30 border-b border-white/15 bg-gradient-to-r from-[color:var(--color-brand-navy)] via-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-[0_8px_28px_rgba(0,55,75,0.28)]">
@@ -166,7 +160,7 @@ export default function App() {
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-[color:var(--color-muted)]">
               <li>Subís el archivo de programación (formato JetSMART u hoja equivalente).</li>
               <li>Usá los filtros de fecha y escala para acotar todas las tablas del informe.</li>
-              <li>Revisá la vista previa, el análisis operativo y el de costos; descargá el Excel del operativo si lo necesitás.</li>
+              <li>Podés abrir la vista previa del itinerario si la necesitás; usá operativo y costos para el detalle.</li>
             </ol>
           </div>
         </section>
@@ -225,35 +219,37 @@ export default function App() {
                 </div>
 
                 <div className="mt-5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--color-muted)]">
-                    Escala (IATA)
-                  </span>
-                  <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                    Sin selección se muestran todas las escalas del archivo.
-                  </p>
-                  <div className="mt-3 flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-page)] p-3">
+                  <label className="flex flex-col gap-1.5" htmlFor="filter-airports">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--color-muted)]">
+                      Escala (IATA)
+                    </span>
+                    <span className="text-xs text-[color:var(--color-muted)]">
+                      Lista múltiple: sin ninguna seleccionada se usan todas. En Windows/Linux mantené Ctrl para elegir
+                      varias; en Mac, Cmd.
+                    </span>
                     {airportsInFile.length === 0 ? (
-                      <span className="text-sm text-[color:var(--color-muted)]">No se detectaron escalas en los datos.</span>
+                      <span className="mt-2 text-sm text-[color:var(--color-muted)]">
+                        No se detectaron escalas en los datos.
+                      </span>
                     ) : (
-                      airportsInFile.map((code) => {
-                        const on = selectedAirports.includes(code)
-                        return (
-                          <button
-                            key={code}
-                            type="button"
-                            onClick={() => toggleAirport(code)}
-                            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                              on
-                                ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
-                                : 'bg-white text-[color:var(--color-ink)] ring-1 ring-[color:var(--color-line)] hover:ring-[color:var(--color-brand-celeste)]/45'
-                            }`}
-                          >
+                      <select
+                        id="filter-airports"
+                        multiple
+                        size={Math.min(14, Math.max(5, airportsInFile.length))}
+                        value={selectedAirports}
+                        onChange={(e) => {
+                          setSelectedAirports([...e.target.selectedOptions].map((o) => o.value))
+                        }}
+                        className="js-input mt-2 max-w-md rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)] px-2 py-2 font-mono text-sm font-semibold text-[color:var(--color-ink)]"
+                      >
+                        {airportsInFile.map((code) => (
+                          <option key={code} value={code}>
                             {code}
-                          </button>
-                        )
-                      })
+                          </option>
+                        ))}
+                      </select>
                     )}
-                  </div>
+                  </label>
                 </div>
 
                 {filtersActive ? (
@@ -265,33 +261,54 @@ export default function App() {
               </section>
             ) : null}
 
-            <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
-              <h2 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Vista previa</h2>
-              <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
-                <table className="min-w-full text-left text-xs md:text-sm">
-                  <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
-                    <tr>
-                      {headers.slice(0, 10).map((h) => (
-                        <th key={h} className="whitespace-nowrap px-3 py-2.5 font-bold">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.map((row, i) => (
-                      <tr key={i} className="border-t border-[color:var(--color-line)] bg-white odd:bg-[color:var(--color-page)]/50">
+            <details
+              key={fileName ?? 'preview'}
+              className="js-card group rounded-3xl border border-[color:var(--color-line)] bg-white [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="cursor-pointer list-none px-5 py-4 pr-8 text-lg font-black tracking-tight text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-page)]/80 md:px-6">
+                <span className="inline-flex w-full items-center justify-between gap-3">
+                  <span>Vista previa del itinerario</span>
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-[color:var(--color-brand-celeste-muted)] group-open:hidden">
+                    Mostrar
+                  </span>
+                  <span className="hidden shrink-0 text-xs font-bold uppercase tracking-wide text-[color:var(--color-brand-celeste-muted)] group-open:inline">
+                    Ocultar
+                  </span>
+                </span>
+                <span className="mt-1 block text-sm font-normal text-[color:var(--color-muted)]">
+                  Primeras 8 filas · tocá el recuadro para ver u ocultar la tabla
+                </span>
+              </summary>
+              <div className="border-t border-[color:var(--color-line)] px-5 pb-5 pt-2 md:px-6 md:pb-6">
+                <div className="overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
+                  <table className="min-w-full text-left text-xs md:text-sm">
+                    <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
+                      <tr>
                         {headers.slice(0, 10).map((h) => (
-                          <td key={h} className="max-w-[10rem] truncate px-3 py-2">
-                            {row[h] == null ? '' : String(row[h])}
-                          </td>
+                          <th key={h} className="whitespace-nowrap px-3 py-2.5 font-bold">
+                            {h}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {preview.map((row, i) => (
+                        <tr
+                          key={i}
+                          className="border-t border-[color:var(--color-line)] bg-white odd:bg-[color:var(--color-page)]/50"
+                        >
+                          {headers.slice(0, 10).map((h) => (
+                            <td key={h} className="max-w-[10rem] truncate px-3 py-2">
+                              {row[h] == null ? '' : String(row[h])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </section>
+            </details>
 
             {rawMatrix.length > 0 ? (
               <>
