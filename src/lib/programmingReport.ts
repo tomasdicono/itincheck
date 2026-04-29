@@ -484,4 +484,8 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
   }
 }
 
-export { normalizeEscala as normalizeProgrammingEscala, parseOperationDate as parseProgrammingOperationDate }
+export {
+  detectEquipamiento as detectProgrammingEquipamiento,
+  normalizeEscala as normalizeProgrammingEscala,
+  parseOperationDate as parseProgrammingOperationDate,
+}

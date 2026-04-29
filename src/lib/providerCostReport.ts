@@ -1,6 +1,7 @@
 import { format, getDaysInMonth, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
+  detectProgrammingEquipamiento,
   getProgrammingMatrixDataStartRow,
   normalizeProgrammingEscala,
   parseProgrammingOperationDate,
@@ -9,6 +10,13 @@ import {
 /** Columnas plantilla JetSMART (misma que informe de programación). */
 const COL_FECHA = 0
 const COL_ESCALA = 7
+const COL_MATERIAL = 11
+
+/** Materiales Swissport: ARS por vuelo. */
+const SWISSPORT_MATERIALES_POR_VUELO_ARS = 39_336
+
+/** Recargo sobre pasada si el avión es 321 (columna L). */
+const SWISSPORT_RECARGO_321 = 0.2
 
 /** Escalas incluidas en análisis de costos (proveedores). */
 export const COST_REPORT_AIRPORTS = [
@@ -31,8 +39,53 @@ export const COST_REPORT_AIRPORTS = [
 
 const ALLOWED = new Set<string>(COST_REPORT_AIRPORTS)
 
-/** AEP y EZE: tabla Swissport (tarifas pendientes). */
+/** AEP y EZE: Swissport (tarifa mensual por bracket). */
 export const SWISSPORT_AIRPORTS = new Set(['AEP', 'EZE'])
+
+type SwissBracket = { min: number; max: number | null; unit: number; label: string }
+
+/** Precio por pasada según vuelos del mes (brackets Swissport AEP). */
+const AEP_SWISS_BRACKETS: SwissBracket[] = [
+  { min: 133, max: 196, unit: 425_949, label: '133–196' },
+  { min: 197, max: 261, unit: 407_126, label: '197–261' },
+  { min: 262, max: 390, unit: 389_133, label: '262–390' },
+  { min: 391, max: 519, unit: 371_942, label: '391–519' },
+  { min: 520, max: 691, unit: 354_823, label: '520–691' },
+  { min: 692, max: 820, unit: 348_439, label: '692–820' },
+  { min: 821, max: 992, unit: 343_209, label: '821–992' },
+  { min: 993, max: 1164, unit: 339_777, label: '993–1164' },
+  { min: 1165, max: 1336, unit: 336_381, label: '1165–1336' },
+  { min: 1337, max: null, unit: 333_019, label: '1337+' },
+]
+
+const EZE_SWISS_BRACKETS: SwissBracket[] = [
+  { min: 133, max: 196, unit: 368_003, label: '133–196' },
+  { min: 197, max: 261, unit: 335_360, label: '197–261' },
+  { min: 262, max: 390, unit: 305_660, label: '262–390' },
+  { min: 391, max: 519, unit: 296_492, label: '391–519' },
+  { min: 520, max: 691, unit: 287_599, label: '520–691' },
+  { min: 692, max: 820, unit: 278_970, label: '692–820' },
+  { min: 821, max: 992, unit: 270_601, label: '821–992' },
+  { min: 993, max: 1164, unit: 262_481, label: '993–1164' },
+  { min: 1165, max: 1336, unit: 254_608, label: '1165–1336' },
+  { min: 1337, max: null, unit: 246_971, label: '1337+' },
+]
+
+function swissBracketUnit(airport: 'AEP' | 'EZE', monthlyFlights: number): { unit: number; label: string } {
+  if (monthlyFlights <= 0) return { unit: 0, label: '—' }
+  const brackets = airport === 'AEP' ? AEP_SWISS_BRACKETS : EZE_SWISS_BRACKETS
+  if (monthlyFlights < 133) {
+    const b = brackets[0]
+    return { unit: b.unit, label: `${b.label} (<133 vuelos)` }
+  }
+  for (const b of brackets) {
+    if (monthlyFlights >= b.min && (b.max == null || monthlyFlights <= b.max)) {
+      return { unit: b.unit, label: b.label }
+    }
+  }
+  const last = brackets[brackets.length - 1]!
+  return { unit: last.unit, label: last.label }
+}
 
 /**
  * Precio por vuelo (llegada + salida) en ARS según cantidad de vuelos en la franja mensual (1–7, 8–14, etc.).
@@ -69,31 +122,38 @@ function monthDayPeriod(d: Date): 1 | 2 | 3 | 4 {
   return 4
 }
 
-/** Una fila por escala y mes calendario. */
+/** Una fila por escala y mes calendario (FlySeg). */
 export type ProviderCostLine = {
   escala: string
   mesIso: string
   mesEtiqueta: string
-  /** Total de vuelos en el mes (todas las franjas). */
   vuelosTotalMes: number
-  /**
-   * Referencia: vuelos del mes × 7 / días del mes (promedio de vuelos por semana calendario).
-   */
   promedioVuelosPorSemanaRef: number
-  /** Tramo 1–60 de la grilla usado para el precio unitario de referencia (según promedio redondeado). */
   tramoTarifaReferencia: number
-  /** Precio unitario FlySeg del tramo de referencia (solo informativo). */
   precioUnitarioReferenciaArs: number | null
-  /** Σ (vuelos en cada franja × tarifa unitaria de esa franja). */
   costoTotalMesRealArs: number | null
+}
+
+/** Un mes en AEP o EZE con desglose Swissport (3 conceptos en UI). */
+export type SwissportMonthBlock = {
+  escala: 'AEP' | 'EZE'
+  mesIso: string
+  mesEtiqueta: string
+  vuelosTotalMes: number
+  vuelos321Mes: number
+  bracketRango: string
+  /** Tarifa base por pasada del bracket (sin 321). */
+  unitPasadaBracketArs: number
+  costoPasadasArs: number
+  costoMaterialesArs: number
+  totalMesArs: number
 }
 
 export type ProviderCostReport = {
   flySeg: ProviderCostLine[]
   flySegTotalArs: number
-  swissport: ProviderCostLine[]
-  swissportTotalArs: number | null
-  swissportPendingPrices: boolean
+  swissportBlocks: SwissportMonthBlock[]
+  swissportTotalArs: number
 }
 
 type PeriodAggKey = string
@@ -163,14 +223,58 @@ function rollupToMonthLines(
   return lines
 }
 
+type SwissBucketKey = string
+
+type SwissBucket = {
+  escala: 'AEP' | 'EZE'
+  mesIso: string
+  mesEtiqueta: string
+  vuelos: number
+  vuelos321: number
+}
+
+function buildSwissportBlocksFromBuckets(buckets: Map<SwissBucketKey, SwissBucket>): SwissportMonthBlock[] {
+  const blocks: SwissportMonthBlock[] = []
+  for (const b of buckets.values()) {
+    const n = b.vuelos
+    const n321 = b.vuelos321
+    if (n <= 0) continue
+
+    const { unit: U, label: bracketRango } = swissBracketUnit(b.escala, n)
+    const nOtros = n - n321
+    const costoPasadasBruto = U * nOtros + U * (1 + SWISSPORT_RECARGO_321) * n321
+    const costoPasadasArs = Math.round(costoPasadasBruto * 100) / 100
+    const costoMaterialesArs = Math.round(n * SWISSPORT_MATERIALES_POR_VUELO_ARS * 100) / 100
+    const totalMesArs = Math.round((costoPasadasArs + costoMaterialesArs) * 100) / 100
+
+    blocks.push({
+      escala: b.escala,
+      mesIso: b.mesIso,
+      mesEtiqueta: b.mesEtiqueta,
+      vuelosTotalMes: n,
+      vuelos321Mes: n321,
+      bracketRango,
+      unitPasadaBracketArs: U,
+      costoPasadasArs,
+      costoMaterialesArs,
+      totalMesArs,
+    })
+  }
+  blocks.sort((a, b) => {
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.mesIso.localeCompare(b.mesIso)
+  })
+  return blocks
+}
+
 /**
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
- * Solo cuenta filas con fecha válida y escala en `COST_REPORT_AIRPORTS`.
- * Internamente usa franjas 1–7 / 8–14 / 15–21 / 22–31; el costo del mes es la suma real por franja.
+ * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
+ * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), materiales por vuelo.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
-  const swissPeriodMap = new Map<PeriodAggKey, PeriodCell>()
+  const swissBuckets = new Map<SwissBucketKey, SwissBucket>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -184,25 +288,37 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     if (escala === '—' || !ALLOWED.has(escala)) continue
 
     const { mesIso, mesEtiqueta } = monthKeyAndLabel(opDate)
+
+    if (SWISSPORT_AIRPORTS.has(escala)) {
+      const ap = escala as 'AEP' | 'EZE'
+      const key: SwissBucketKey = `${ap}|${mesIso}`
+      let b = swissBuckets.get(key)
+      if (!b) {
+        b = { escala: ap, mesIso, mesEtiqueta, vuelos: 0, vuelos321: 0 }
+        swissBuckets.set(key, b)
+      }
+      b.vuelos += 1
+      if (detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321') b.vuelos321 += 1
+      continue
+    }
+
     const periodo = monthDayPeriod(opDate)
     const key: PeriodAggKey = `${escala}|${mesIso}|${periodo}`
-
-    const target = SWISSPORT_AIRPORTS.has(escala) ? swissPeriodMap : flySegPeriodMap
-    const prev = target.get(key)
+    const prev = flySegPeriodMap.get(key)
     if (prev) prev.n += 1
-    else target.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
+    else flySegPeriodMap.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
   }
 
   const flySeg = rollupToMonthLines(flySegPeriodMap, true)
-  const swissport = rollupToMonthLines(swissPeriodMap, false)
+  const swissportBlocks = buildSwissportBlocksFromBuckets(swissBuckets)
 
   const flySegTotalArs = flySeg.reduce((s, l) => s + (l.costoTotalMesRealArs ?? 0), 0)
+  const swissportTotalArs = swissportBlocks.reduce((s, b) => s + b.totalMesArs, 0)
 
   return {
     flySeg,
     flySegTotalArs: Math.round(flySegTotalArs * 100) / 100,
-    swissport,
-    swissportTotalArs: null,
-    swissportPendingPrices: true,
+    swissportBlocks,
+    swissportTotalArs: Math.round(swissportTotalArs * 100) / 100,
   }
 }
