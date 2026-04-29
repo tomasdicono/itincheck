@@ -467,10 +467,13 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     meses,
     tablaEscalaPorMes,
     vuelosMismoMinuto,
-    extrasFueraItc: extrasFueraItc.map(({ fechaIso: _omit, mesIso: _omit2, extrasMinutos, ...rest }) => ({
-      ...rest,
-      extrasMinutos,
-      extrasTexto: formatDuracionMinutos(extrasMinutos),
+    extrasFueraItc: extrasFueraItc.map((row) => ({
+      fecha: row.fecha,
+      escala: row.escala,
+      vuelo: row.vuelo,
+      etd: row.etd,
+      extrasMinutos: row.extrasMinutos,
+      extrasTexto: formatDuracionMinutos(row.extrasMinutos),
     })),
     extrasItcTotalMinutos,
     extrasItcTotalTexto: formatDuracionMinutos(extrasItcTotalMinutos),
