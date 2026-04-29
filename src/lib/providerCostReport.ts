@@ -22,6 +22,18 @@ const SWISSPORT_SIMULTANEIDAD_MAX_MINUTOS = 59
 /** Materiales Swissport: ARS por vuelo. */
 const SWISSPORT_MATERIALES_POR_VUELO_ARS = 39_336
 
+/** Sillas de ruedas (WCH) facturadas por vuelo en FlySeg. */
+export const FLYSEG_SILLAS_RUEDAS_POR_VUELO = 1
+
+/** Sillas de ruedas facturadas por vuelo en Swissport (AEP/EZE). */
+export const SWISSPORT_SILLAS_RUEDAS_POR_VUELO = 2
+
+/** Sillas de ruedas: ARS unitario (FlySeg, escalas fuera de AEP/EZE). */
+export const FLYSEG_SILLA_RUEDAS_UNITARIO_ARS = 55_418
+
+/** Sillas de ruedas: ARS unitario (Swissport AEP/EZE). */
+export const SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS = 60_300
+
 /** Recargo sobre pasada si el avión es 321 (columna L). */
 const SWISSPORT_RECARGO_321 = 0.2
 
@@ -129,7 +141,7 @@ function monthDayPeriod(d: Date): 1 | 2 | 3 | 4 {
   return 4
 }
 
-/** Una fila por escala y mes calendario (FlySeg). */
+/** Una fila por escala y mes calendario (FlySeg); el desglose se arma en la UI (franjas + sillas + total). */
 export type ProviderCostLine = {
   escala: string
   mesIso: string
@@ -138,6 +150,11 @@ export type ProviderCostLine = {
   promedioVuelosPorSemanaRef: number
   tramoTarifaReferencia: number
   precioUnitarioReferenciaArs: number | null
+  /** Costo solo por tarifas de franjas (1–7, 8–14, …). */
+  costoFranjasArs: number | null
+  /** WCH por vuelo (FlySeg: 1) × valor unitario. */
+  costoSillasRuedasArs: number
+  /** Franjas + sillas de ruedas. */
   costoTotalMesRealArs: number | null
 }
 
@@ -156,6 +173,8 @@ export type SwissportMonthBlock = {
   /** Recargo por simultaneidad STD (mismo día, |ETD−ETD|≤59 min). */
   costoSimultaneidadArs: number
   costoMaterialesArs: number
+  /** Sillas por vuelo (Swissport: 2) × valor unitario AEP/EZE. */
+  costoSillasRuedasArs: number
   totalMesArs: number
 }
 
@@ -211,8 +230,14 @@ function rollupToMonthLines(
 
     const costoBruto =
       c1 * flySegUnitForCount(c1) + c2 * flySegUnitForCount(c2) + c3 * flySegUnitForCount(c3) + c4 * flySegUnitForCount(c4)
-    const costoTotalMesRealArs =
+    const costoFranjasArs =
       withPricing && vuelosTotalMes > 0 ? Math.round(costoBruto * 100) / 100 : null
+    const costoSillasRuedasArs =
+      withPricing && vuelosTotalMes > 0
+        ? Math.round(vuelosTotalMes * FLYSEG_SILLAS_RUEDAS_POR_VUELO * FLYSEG_SILLA_RUEDAS_UNITARIO_ARS * 100) / 100
+        : 0
+    const costoTotalMesRealArs =
+      costoFranjasArs != null ? Math.round((costoFranjasArs + costoSillasRuedasArs) * 100) / 100 : null
 
     lines.push({
       escala: b.escala,
@@ -222,6 +247,8 @@ function rollupToMonthLines(
       promedioVuelosPorSemanaRef: Math.round(promedioVuelosPorSemanaRef * 100) / 100,
       tramoTarifaReferencia,
       precioUnitarioReferenciaArs,
+      costoFranjasArs,
+      costoSillasRuedasArs,
       costoTotalMesRealArs,
     })
   }
@@ -318,7 +345,10 @@ function buildSwissportBlocksFromBuckets(
     const costoSimultaneidadArs = computeSwissportSimultaneitySurchargeArs(U, flights)
 
     const costoMaterialesArs = Math.round(n * SWISSPORT_MATERIALES_POR_VUELO_ARS * 100) / 100
-    const totalMesArs = Math.round((costoPasadasArs + costoSimultaneidadArs + costoMaterialesArs) * 100) / 100
+    const costoSillasRuedasArs = Math.round(n * SWISSPORT_SILLAS_RUEDAS_POR_VUELO * SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS * 100) / 100
+    const totalMesArs = Math.round(
+      (costoPasadasArs + costoSimultaneidadArs + costoMaterialesArs + costoSillasRuedasArs) * 100,
+    ) / 100
 
     blocks.push({
       escala: b.escala,
@@ -331,6 +361,7 @@ function buildSwissportBlocksFromBuckets(
       costoPasadasArs,
       costoSimultaneidadArs,
       costoMaterialesArs,
+      costoSillasRuedasArs,
       totalMesArs,
     })
   }
@@ -345,7 +376,8 @@ function buildSwissportBlocksFromBuckets(
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
  * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
  * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
- * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo.
+ * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
+ * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
