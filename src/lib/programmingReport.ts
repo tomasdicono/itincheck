@@ -483,3 +483,5 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     simultaneidadMasCuatro,
   }
 }
+
+export { normalizeEscala as normalizeProgrammingEscala, parseOperationDate as parseProgrammingOperationDate }

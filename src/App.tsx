@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
+import { CostAnalysisTab } from './components/CostAnalysisTab'
 import { downloadInformeExcel } from './lib/exportInformeExcel'
 import { parseExcelFile } from './lib/parseExcel'
+import { buildProviderCostReport } from './lib/providerCostReport'
 import {
   buildProgrammingReport,
   collectAirportsFromProgrammingMatrix,
@@ -22,6 +24,7 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
+  const [mainTab, setMainTab] = useState<'operativo' | 'costos'>('operativo')
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -35,6 +38,7 @@ export default function App() {
       setDateFrom('')
       setDateTo('')
       setSelectedAirports([])
+      setMainTab('operativo')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo leer el Excel.')
     }
@@ -55,6 +59,8 @@ export default function App() {
   )
 
   const programmingReport = useMemo(() => buildProgrammingReport(filteredMatrix), [filteredMatrix])
+
+  const providerCostReport = useMemo(() => buildProviderCostReport(filteredMatrix), [filteredMatrix])
 
   const airportsInFile = useMemo(() => collectAirportsFromProgrammingMatrix(rawMatrix), [rawMatrix])
 
@@ -160,7 +166,7 @@ export default function App() {
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-[color:var(--color-muted)]">
               <li>Subís el archivo de programación (formato JetSMART u hoja equivalente).</li>
               <li>Usá los filtros de fecha y escala para acotar todas las tablas del informe.</li>
-              <li>Revisá la vista previa y descargá el Excel si lo necesitás.</li>
+              <li>Revisá la vista previa, el análisis operativo y el de costos; descargá el Excel del operativo si lo necesitás.</li>
             </ol>
           </div>
         </section>
@@ -179,7 +185,8 @@ export default function App() {
                   <div>
                     <h2 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Filtros</h2>
                     <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-                      Aplican a la vista previa y a todo el informe (por fecha de operación y escala IATA, columna H).
+                      Aplican a la vista previa, al análisis operativo y al análisis de costos (fecha de operación y
+                      escala IATA, columna H).
                     </p>
                   </div>
                   <button
@@ -252,7 +259,7 @@ export default function App() {
                 {filtersActive ? (
                   <p className="mt-4 text-sm font-semibold text-[color:var(--color-brand-celeste-muted)]">
                     Mostrando {filteredPreviewRows.length.toLocaleString('es-AR')} de{' '}
-                    {rows.length.toLocaleString('es-AR')} filas · informe recalculado con el mismo criterio.
+                    {rows.length.toLocaleString('es-AR')} filas · informes recalculados con el mismo criterio.
                   </p>
                 ) : null}
               </section>
@@ -286,7 +293,36 @@ export default function App() {
               </div>
             </section>
 
-            {programmingReport ? (
+            {rawMatrix.length > 0 ? (
+              <>
+                <div className="js-card flex flex-wrap gap-2 rounded-3xl border border-[color:var(--color-line)] bg-white p-2">
+                  <button
+                    type="button"
+                    onClick={() => setMainTab('operativo')}
+                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                      mainTab === 'operativo'
+                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                    }`}
+                  >
+                    Análisis operativo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMainTab('costos')}
+                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                      mainTab === 'costos'
+                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                    }`}
+                  >
+                    Análisis costos
+                  </button>
+                </div>
+
+                {mainTab === 'operativo' && (
+                  <>
+                    {programmingReport ? (
               <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1">
@@ -578,6 +614,16 @@ export default function App() {
                 Con los filtros actuales no quedaron filas de datos válidas para el informe (fechas u escalas fuera de
                 rango). Probá ampliar fechas o elegir otras escalas.
               </section>
+            ) : null}
+                  </>
+                )}
+
+                {mainTab === 'costos' && (
+                  <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+                    <CostAnalysisTab report={providerCostReport} />
+                  </section>
+                )}
+              </>
             ) : null}
           </>
         ) : null}
