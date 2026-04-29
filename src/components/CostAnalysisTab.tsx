@@ -38,7 +38,9 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
         <p className="mt-2">
           <strong>Swissport</strong> (AEP y EZE): se factura por <strong>cantidad de vuelos del mes</strong> según
           brackets de pasada; cada vuelo en <strong>321</strong> (columna L) suma <strong>+20%</strong> sobre el valor de
-          la pasada; se suman <strong>$39.336</strong> por vuelo en concepto de materiales.
+          la pasada. <strong>Simultaneidades</strong> (mismo día, STD/ETD columna D a ≤59 min de distancia):{' '}
+          <strong>+10%</strong> sobre la pasada de cada vuelo afectado si en el grupo hay 2 o 3 vuelos;{' '}
+          <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en materiales.
         </p>
       </div>
 
@@ -111,7 +113,7 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos Swissport</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          AEP y EZE: por cada mes se muestran tres filas (pasadas con recargo 321, materiales y total).
+          AEP y EZE: por cada mes se muestran pasadas (base +321), recargo simultaneidades, materiales y total.
         </p>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
@@ -150,6 +152,23 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
                         {b.vuelos321Mes.toLocaleString('es-AR')} vuelos 321
                       </td>
                       <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(b.costoPasadasArs)}</td>
+                    </tr>
+                    <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                      <td className="px-3 py-2 font-mono font-bold">{b.escala}</td>
+                      <td className="px-3 py-2 capitalize">{b.mesEtiqueta}</td>
+                      <td className="px-3 py-2 font-semibold text-[color:var(--color-ink)]">
+                        Recargo simultaneidades
+                        <span className="mt-0.5 block text-xs font-normal text-[color:var(--color-muted)]">
+                          Mismo día, |ETD−ETD| ≤ 59 min. +10% pasada (2–3 vuelos en grupo); +30% (4 o más).
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{b.vuelosTotalMes.toLocaleString('es-AR')}</td>
+                      <td className="px-3 py-2 text-xs text-[color:var(--color-muted)]">
+                        Sobre pasada base +321 por vuelo
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {money(b.costoSimultaneidadArs)}
+                      </td>
                     </tr>
                     <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
                       <td className="px-3 py-2 font-mono font-bold">{b.escala}</td>

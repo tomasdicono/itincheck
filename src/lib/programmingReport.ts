@@ -486,6 +486,7 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
 
 export {
   detectEquipamiento as detectProgrammingEquipamiento,
+  etdMinutesFromMidnight as programmingRowEtdMinutesFromMidnight,
   normalizeEscala as normalizeProgrammingEscala,
   parseOperationDate as parseProgrammingOperationDate,
 }

@@ -5,12 +5,19 @@ import {
   getProgrammingMatrixDataStartRow,
   normalizeProgrammingEscala,
   parseProgrammingOperationDate,
+  programmingRowEtdMinutesFromMidnight,
 } from './programmingReport'
 
 /** Columnas plantilla JetSMART (misma que informe de programación). */
 const COL_FECHA = 0
+const COL_ETD = 3
 const COL_ESCALA = 7
 const COL_MATERIAL = 11
+
+/**
+ * Swissport AEP/EZE: dos vuelos son simultáneos si el STD/ETD (columna D) dista ≤ esta cantidad de minutos.
+ */
+const SWISSPORT_SIMULTANEIDAD_MAX_MINUTOS = 59
 
 /** Materiales Swissport: ARS por vuelo. */
 const SWISSPORT_MATERIALES_POR_VUELO_ARS = 39_336
@@ -134,7 +141,7 @@ export type ProviderCostLine = {
   costoTotalMesRealArs: number | null
 }
 
-/** Un mes en AEP o EZE con desglose Swissport (3 conceptos en UI). */
+/** Un mes en AEP o EZE con desglose Swissport. */
 export type SwissportMonthBlock = {
   escala: 'AEP' | 'EZE'
   mesIso: string
@@ -144,7 +151,10 @@ export type SwissportMonthBlock = {
   bracketRango: string
   /** Tarifa base por pasada del bracket (sin 321). */
   unitPasadaBracketArs: number
+  /** Pasadas: U×no-321 + U×1,2×321 (sin simultaneidad). */
   costoPasadasArs: number
+  /** Recargo por simultaneidad STD (mismo día, |ETD−ETD|≤59 min). */
+  costoSimultaneidadArs: number
   costoMaterialesArs: number
   totalMesArs: number
 }
@@ -233,7 +243,66 @@ type SwissBucket = {
   vuelos321: number
 }
 
-function buildSwissportBlocksFromBuckets(buckets: Map<SwissBucketKey, SwissBucket>): SwissportMonthBlock[] {
+type SwissFlightDetail = {
+  dayIso: string
+  etdMinFromMidnight: number | null
+  is321: boolean
+}
+
+/**
+ * Cantidad de vuelos en el mismo grupo de simultaneidad (este + otros con STD a ≤59 min).
+ * Si no hay ETD válido, se considera solo el propio vuelo (sin recargo).
+ */
+function swissSimultaneityGroupSizeForFlight(dayFlights: SwissFlightDetail[], index: number): number {
+  const self = dayFlights[index]
+  if (!self) return 1
+  if (self.etdMinFromMidnight == null) return 1
+  let others = 0
+  for (let j = 0; j < dayFlights.length; j++) {
+    if (j === index) continue
+    const o = dayFlights[j]!
+    if (o.etdMinFromMidnight == null) continue
+    if (Math.abs(self.etdMinFromMidnight - o.etdMinFromMidnight) <= SWISSPORT_SIMULTANEIDAD_MAX_MINUTOS) {
+      others++
+    }
+  }
+  return others + 1
+}
+
+/** Recargo sobre la pasada (base con 321 si aplica): 10% si 2–3 vuelos en simultaneidad; 30% si 4 o más. */
+function swissSimultaneitySurchargeRate(groupSize: number): number {
+  if (groupSize <= 1) return 0
+  if (groupSize <= 3) return 0.1
+  return 0.3
+}
+
+function computeSwissportSimultaneitySurchargeArs(U: number, flights: SwissFlightDetail[]): number {
+  if (flights.length === 0 || U <= 0) return 0
+
+  const byDay = new Map<string, SwissFlightDetail[]>()
+  for (const f of flights) {
+    const arr = byDay.get(f.dayIso) ?? []
+    arr.push(f)
+    byDay.set(f.dayIso, arr)
+  }
+
+  let sum = 0
+  for (const dayFlights of byDay.values()) {
+    for (let i = 0; i < dayFlights.length; i++) {
+      const f = dayFlights[i]!
+      const basePasada = U * (f.is321 ? 1 + SWISSPORT_RECARGO_321 : 1)
+      const g = swissSimultaneityGroupSizeForFlight(dayFlights, i)
+      const rate = swissSimultaneitySurchargeRate(g)
+      sum += basePasada * rate
+    }
+  }
+  return Math.round(sum * 100) / 100
+}
+
+function buildSwissportBlocksFromBuckets(
+  buckets: Map<SwissBucketKey, SwissBucket>,
+  flightLists: Map<SwissBucketKey, SwissFlightDetail[]>,
+): SwissportMonthBlock[] {
   const blocks: SwissportMonthBlock[] = []
   for (const b of buckets.values()) {
     const n = b.vuelos
@@ -244,8 +313,12 @@ function buildSwissportBlocksFromBuckets(buckets: Map<SwissBucketKey, SwissBucke
     const nOtros = n - n321
     const costoPasadasBruto = U * nOtros + U * (1 + SWISSPORT_RECARGO_321) * n321
     const costoPasadasArs = Math.round(costoPasadasBruto * 100) / 100
+
+    const flights = flightLists.get(`${b.escala}|${b.mesIso}`) ?? []
+    const costoSimultaneidadArs = computeSwissportSimultaneitySurchargeArs(U, flights)
+
     const costoMaterialesArs = Math.round(n * SWISSPORT_MATERIALES_POR_VUELO_ARS * 100) / 100
-    const totalMesArs = Math.round((costoPasadasArs + costoMaterialesArs) * 100) / 100
+    const totalMesArs = Math.round((costoPasadasArs + costoSimultaneidadArs + costoMaterialesArs) * 100) / 100
 
     blocks.push({
       escala: b.escala,
@@ -256,6 +329,7 @@ function buildSwissportBlocksFromBuckets(buckets: Map<SwissBucketKey, SwissBucke
       bracketRango,
       unitPasadaBracketArs: U,
       costoPasadasArs,
+      costoSimultaneidadArs,
       costoMaterialesArs,
       totalMesArs,
     })
@@ -270,11 +344,13 @@ function buildSwissportBlocksFromBuckets(buckets: Map<SwissBucketKey, SwissBucke
 /**
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
  * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
- * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), materiales por vuelo.
+ * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
+ * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
   const swissBuckets = new Map<SwissBucketKey, SwissBucket>()
+  const swissFlightLists = new Map<SwissBucketKey, SwissFlightDetail[]>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -299,6 +375,14 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
       }
       b.vuelos += 1
       if (detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321') b.vuelos321 += 1
+
+      const list = swissFlightLists.get(key) ?? []
+      list.push({
+        dayIso: format(opDate, 'yyyy-MM-dd'),
+        etdMinFromMidnight: programmingRowEtdMinutesFromMidnight(row[COL_ETD]),
+        is321: detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321',
+      })
+      swissFlightLists.set(key, list)
       continue
     }
 
@@ -310,7 +394,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   }
 
   const flySeg = rollupToMonthLines(flySegPeriodMap, true)
-  const swissportBlocks = buildSwissportBlocksFromBuckets(swissBuckets)
+  const swissportBlocks = buildSwissportBlocksFromBuckets(swissBuckets, swissFlightLists)
 
   const flySegTotalArs = flySeg.reduce((s, l) => s + (l.costoTotalMesRealArs ?? 0), 0)
   const swissportTotalArs = swissportBlocks.reduce((s, b) => s + b.totalMesArs, 0)
