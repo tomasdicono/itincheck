@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchBcraValuacionArsPerUsd, type BcraValuacionQuote } from '../lib/bcraValuacionUsd'
+import { fetchUsdArsSellQuote, type UsdArsQuote } from '../lib/usdArsSellQuote'
 
 export function useBcraValuacionUsd() {
-  const [quote, setQuote] = useState<BcraValuacionQuote | null>(null)
+  const [quote, setQuote] = useState<UsdArsQuote | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -10,7 +10,7 @@ export function useBcraValuacionUsd() {
     const ac = new AbortController()
     setLoading(true)
     setError(null)
-    void fetchBcraValuacionArsPerUsd(ac.signal)
+    void fetchUsdArsSellQuote(ac.signal)
       .then((q) => {
         setQuote(q)
         setError(null)

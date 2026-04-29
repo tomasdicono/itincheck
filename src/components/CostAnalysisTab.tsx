@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import { DualMoneyTotal } from './DualMoneyTotal'
 import { formatArsWithUsd } from '../lib/formatDualCurrency'
 import type { ProviderCostReport } from '../lib/providerCostReport'
+import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
   type RampaMonthLine,
   COST_REPORT_AIRPORTS,
@@ -65,12 +66,14 @@ export function CostAnalysisTab({
   tcLoading,
   tcError,
   tcQuoteDateIso,
+  tcQuoteProvider,
 }: {
   report: ProviderCostReport
   arsPerUsd: number | null
   tcLoading: boolean
   tcError: string | null
   tcQuoteDateIso: string | null
+  tcQuoteProvider: UsdArsQuoteProvider | null
 }) {
   const money = (n: number | null) => formatArsWithUsd(n, arsPerUsd)
   const rampaFooterArs = rampaUsdToArs(report.rampaTotalUsd, arsPerUsd)
@@ -81,7 +84,7 @@ export function CostAnalysisTab({
 
       <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-brand-glow)]/40 p-4 text-sm text-[color:var(--color-ink)]">
         {tcLoading ? (
-          <p className="font-semibold">Consultando tipo de cambio de valuación BCRA (datos.gob.ar)…</p>
+          <p className="font-semibold">Consultando dólar oficial venta (DolarApi.com)…</p>
         ) : tcError ? (
           <p>
             <span className="font-semibold">Cotización USD:</span> no disponible ({tcError}). Se muestran solo
@@ -89,10 +92,39 @@ export function CostAnalysisTab({
           </p>
         ) : arsPerUsd != null && tcQuoteDateIso ? (
           <p>
-            <span className="font-semibold">Equivalente en USD:</span> tipo de cambio de valuación del BCRA (serie
-            pública datos.gob.ar). Último dato publicado: {formatIsoToAr(tcQuoteDateIso)} —{' '}
-            {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 4 })} ARS por USD. Los totales muestran pesos y
-            dólares en líneas separadas.
+            <span className="font-semibold">Equivalente en USD:</span>{' '}
+            {tcQuoteProvider === 'dolarapi_oficial_venta' ? (
+              <>
+                dólar oficial <strong>venta</strong> vía{' '}
+                <a
+                  href="https://dolarapi.com"
+                  className="font-semibold underline decoration-[color:var(--color-brand-teal)]"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  DolarApi.com
+                </a>{' '}
+                (misma referencia que la tabla de billetes del{' '}
+                <a
+                  href="https://www.bna.com.ar/Personas"
+                  className="font-semibold underline decoration-[color:var(--color-brand-teal)]"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Banco Nación
+                </a>
+                ). Fecha de actualización: {formatIsoToAr(tcQuoteDateIso)} —{' '}
+                {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 2 })} ARS por USD (venta). Los totales
+                muestran pesos y dólares en líneas separadas.
+              </>
+            ) : (
+              <>
+                cotización de <strong>respaldo</strong>: tipo de cambio de valuación BCRA (datos.gob.ar), porque no se
+                pudo usar DolarApi. Fecha: {formatIsoToAr(tcQuoteDateIso)} —{' '}
+                {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 4 })} ARS por USD. Los totales muestran
+                pesos y dólares en líneas separadas.
+              </>
+            )}
           </p>
         ) : (
           <p className="text-[color:var(--color-muted)]">Sin cotización para mostrar equivalentes en USD.</p>
@@ -132,7 +164,7 @@ export function CostAnalysisTab({
           col. I), si el ETD (columna D) está entre <strong>00:00 y 05:59</strong> y la escala no es REL ni RES, la
           tarifa de ese vuelo (tarifa + adicionales) lleva un{' '}
           <strong>−{(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%</strong>; en <strong>internacionales</strong>{' '}
-          no aplica ese descuento. El equivalente en ARS usa la misma cotización BCRA del encabezado.
+          no aplica ese descuento. El equivalente en ARS usa la misma cotización USD del encabezado.
         </p>
       </div>
 

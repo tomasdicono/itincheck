@@ -459,15 +459,18 @@ export default function App() {
                     Horas extra ITC
                   </h3>
                   {bcra.loading ? (
-                    <p className="mt-2 text-xs text-[color:var(--color-muted)]">Cargando cotización BCRA para USD…</p>
+                    <p className="mt-2 text-xs text-[color:var(--color-muted)]">Cargando dólar oficial venta para USD…</p>
                   ) : bcra.quote ? (
                     <p className="mt-2 text-xs text-[color:var(--color-muted)]">
-                      Costos en ARS con equivalente USD (valuación BCRA al {bcra.quote.date.split('-').reverse().join('/')}
+                      Costos en ARS con equivalente USD (
+                      {bcra.quote.provider === 'dolarapi_oficial_venta'
+                        ? `venta oficial al ${bcra.quote.date.split('-').reverse().join('/')}`
+                        : `respaldo BCRA valuación al ${bcra.quote.date.split('-').reverse().join('/')}`}
                       ).
                     </p>
                   ) : bcra.error ? (
                     <p className="mt-2 text-xs text-[color:var(--color-muted)]">
-                      No se pudo cargar la cotización BCRA; solo ARS. ({bcra.error})
+                      No se pudo cargar la cotización USD; solo ARS. ({bcra.error})
                     </p>
                   ) : null}
                   <div className="mt-2 max-h-72 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
@@ -661,6 +664,7 @@ export default function App() {
                       tcLoading={bcra.loading}
                       tcError={bcra.error}
                       tcQuoteDateIso={bcra.quote?.date ?? null}
+                      tcQuoteProvider={bcra.quote?.provider ?? null}
                     />
                   </section>
                 )}

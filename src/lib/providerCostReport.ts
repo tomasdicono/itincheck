@@ -199,7 +199,7 @@ export type SwissportMonthBlock = {
   totalMesArs: number
 }
 
-/** Un mes y escala para costos Rampa (montos en USD; conversión ARS en la UI con TC BCRA). */
+/** Un mes y escala para costos Rampa (montos en USD; conversión ARS en la UI con dólar oficial venta / TC del encabezado). */
 export type RampaMonthLine = {
   escala: string
   mesIso: string
