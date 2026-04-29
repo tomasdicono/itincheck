@@ -12,7 +12,23 @@ import {
 const COL_FECHA = 0
 const COL_ETD = 3
 const COL_ESCALA = 7
+/** Destino (Excel columna I): usado para clasificar vuelos internacionales en costos Rampa. */
+const COL_DESTINO = 8
 const COL_MATERIAL = 11
+
+/** Costos Rampa (USD por vuelo, escalas distintas de REL/RES). */
+export const RAMPA_DOM_320_USD = 223
+export const RAMPA_DOM_321_USD = 262
+export const RAMPA_INTER_320_USD = 1062
+export const RAMPA_INTER_321_USD = 1261
+export const RAMPA_ADICIONALES_USD = 31
+/** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
+export const RAMPA_REL_RES_USD = 550
+
+/** Destinos en columna I que clasifican el vuelo como internacional para Rampa. */
+export const RAMPA_INTER_DESTINOS = ['LIM', 'SCL', 'NAT', 'REC', 'GIG', 'FLN', 'IQQ', 'ASU'] as const
+
+const RAMPA_INTER_DESTINO_CODES = new Set<string>(RAMPA_INTER_DESTINOS)
 
 /**
  * Swissport AEP/EZE: dos vuelos son simultáneos si el STD/ETD (columna D) dista ≤ esta cantidad de minutos.
@@ -178,6 +194,22 @@ export type SwissportMonthBlock = {
   totalMesArs: number
 }
 
+/** Un mes y escala para costos Rampa (montos en USD; conversión ARS en la UI con TC BCRA). */
+export type RampaMonthLine = {
+  escala: string
+  mesIso: string
+  mesEtiqueta: string
+  vuelosTotalMes: number
+  totalUsd: number
+  dom320: number
+  dom321: number
+  inter320: number
+  inter321: number
+  otroDom: number
+  otroInter: number
+  relRes: number
+}
+
 export type ProviderCostReport = {
   flySeg: ProviderCostLine[]
   /** Suma de costos por franjas (tarifas) de todas las líneas FlySeg. */
@@ -193,6 +225,8 @@ export type ProviderCostReport = {
   swissportTotalSillasRuedasArs: number
   /** Suma de los cuatro conceptos (criterio del pie en varias filas). */
   swissportTotalArs: number
+  rampaLines: RampaMonthLine[]
+  rampaTotalUsd: number
 }
 
 type PeriodAggKey = string
@@ -382,17 +416,132 @@ function buildSwissportBlocksFromBuckets(
   return blocks
 }
 
+type RampaBucketKey = string
+
+type RampaBucketAgg = {
+  escala: string
+  mesIso: string
+  mesEtiqueta: string
+  dom320: number
+  dom321: number
+  inter320: number
+  inter321: number
+  otroDom: number
+  otroInter: number
+  relRes: number
+}
+
+function rampaInternacionalDesdeColumnaI(destino: unknown): boolean {
+  const codes = String(destino ?? '')
+    .toUpperCase()
+    .match(/[A-Z]{3}/g)
+  if (!codes?.length) return false
+  return codes.some((c) => RAMPA_INTER_DESTINO_CODES.has(c))
+}
+
+function rampaBumpBucket(
+  map: Map<RampaBucketKey, RampaBucketAgg>,
+  escala: string,
+  mesIso: string,
+  mesEtiqueta: string,
+  row: unknown[],
+): void {
+  const key: RampaBucketKey = `${escala}|${mesIso}`
+  let b = map.get(key)
+  if (!b) {
+    b = {
+      escala,
+      mesIso,
+      mesEtiqueta,
+      dom320: 0,
+      dom321: 0,
+      inter320: 0,
+      inter321: 0,
+      otroDom: 0,
+      otroInter: 0,
+      relRes: 0,
+    }
+    map.set(key, b)
+  }
+
+  if (escala === 'REL' || escala === 'RES') {
+    b.relRes += 1
+    return
+  }
+
+  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
+  const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
+  if (eq === '321') {
+    if (inter) b.inter321 += 1
+    else b.dom321 += 1
+  } else if (eq === '320') {
+    if (inter) b.inter320 += 1
+    else b.dom320 += 1
+  } else {
+    if (inter) b.otroInter += 1
+    else b.otroDom += 1
+  }
+}
+
+function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): RampaMonthLine[] {
+  const packDom = RAMPA_DOM_320_USD + RAMPA_ADICIONALES_USD
+  const pack321Dom = RAMPA_DOM_321_USD + RAMPA_ADICIONALES_USD
+  const packInter = RAMPA_INTER_320_USD + RAMPA_ADICIONALES_USD
+  const pack321Inter = RAMPA_INTER_321_USD + RAMPA_ADICIONALES_USD
+
+  const lines: RampaMonthLine[] = []
+  for (const b of map.values()) {
+    const vuelos =
+      b.dom320 + b.dom321 + b.inter320 + b.inter321 + b.otroDom + b.otroInter + b.relRes
+    if (vuelos === 0) continue
+
+    const totalUsdRaw =
+      b.relRes * RAMPA_REL_RES_USD +
+      b.dom320 * packDom +
+      b.dom321 * pack321Dom +
+      b.inter320 * packInter +
+      b.inter321 * pack321Inter +
+      b.otroDom * packDom +
+      b.otroInter * packInter
+
+    const totalUsd = Math.round(totalUsdRaw * 100) / 100
+
+    lines.push({
+      escala: b.escala,
+      mesIso: b.mesIso,
+      mesEtiqueta: b.mesEtiqueta,
+      vuelosTotalMes: vuelos,
+      totalUsd,
+      dom320: b.dom320,
+      dom321: b.dom321,
+      inter320: b.inter320,
+      inter321: b.inter321,
+      otroDom: b.otroDom,
+      otroInter: b.otroInter,
+      relRes: b.relRes,
+    })
+  }
+
+  lines.sort((a, b) => {
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.mesIso.localeCompare(b.mesIso)
+  })
+  return lines
+}
+
 /**
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
  * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
  * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
  * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
  * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE.
+ * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana).
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
   const swissBuckets = new Map<SwissBucketKey, SwissBucket>()
   const swissFlightLists = new Map<SwissBucketKey, SwissFlightDetail[]>()
+  const rampaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -406,6 +555,8 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     if (escala === '—' || !ALLOWED.has(escala)) continue
 
     const { mesIso, mesEtiqueta } = monthKeyAndLabel(opDate)
+
+    rampaBumpBucket(rampaBuckets, escala, mesIso, mesEtiqueta, row)
 
     if (SWISSPORT_AIRPORTS.has(escala)) {
       const ap = escala as 'AEP' | 'EZE'
@@ -468,6 +619,9 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
         100,
     ) / 100
 
+  const rampaLines = buildRampaLinesFromBuckets(rampaBuckets)
+  const rampaTotalUsd = Math.round(rampaLines.reduce((s, l) => s + l.totalUsd, 0) * 100) / 100
+
   return {
     flySeg,
     flySegTotalPasadasArs,
@@ -479,5 +633,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     swissportTotalMaterialesArs,
     swissportTotalSillasRuedasArs,
     swissportTotalArs,
+    rampaLines,
+    rampaTotalUsd,
   }
 }

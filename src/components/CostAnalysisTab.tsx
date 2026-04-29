@@ -3,9 +3,17 @@ import { DualMoneyTotal } from './DualMoneyTotal'
 import { formatArsWithUsd } from '../lib/formatDualCurrency'
 import type { ProviderCostReport } from '../lib/providerCostReport'
 import {
+  type RampaMonthLine,
   COST_REPORT_AIRPORTS,
   FLYSEG_SILLA_RUEDAS_UNITARIO_ARS,
   FLYSEG_SILLAS_RUEDAS_POR_VUELO,
+  RAMPA_ADICIONALES_USD,
+  RAMPA_DOM_320_USD,
+  RAMPA_DOM_321_USD,
+  RAMPA_INTER_320_USD,
+  RAMPA_INTER_321_USD,
+  RAMPA_INTER_DESTINOS,
+  RAMPA_REL_RES_USD,
   SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS,
   SWISSPORT_SILLAS_RUEDAS_POR_VUELO,
 } from '../lib/providerCostReport'
@@ -19,6 +27,30 @@ function formatIsoToAr(iso: string): string {
   const [y, m, d] = iso.split('-')
   if (!y || !m || !d) return iso
   return `${d}/${m}/${y}`
+}
+
+const usdFmtPlain = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+function rampaUsdToArs(usd: number, arsPerUsd: number | null): number | null {
+  if (arsPerUsd == null || arsPerUsd <= 0 || !Number.isFinite(arsPerUsd)) return null
+  return Math.round(usd * arsPerUsd * 100) / 100
+}
+
+function rampaDetalleLinea(line: RampaMonthLine): string {
+  const parts: string[] = []
+  if (line.relRes > 0) parts.push(`REL/RES (${line.relRes} vuelos × ${RAMPA_REL_RES_USD} USD)`)
+  if (line.dom320 > 0) parts.push(`Dom 320: ${line.dom320}`)
+  if (line.dom321 > 0) parts.push(`Dom 321: ${line.dom321}`)
+  if (line.inter320 > 0) parts.push(`Inter 320: ${line.inter320}`)
+  if (line.inter321 > 0) parts.push(`Inter 321: ${line.inter321}`)
+  if (line.otroDom > 0) parts.push(`Otro eq. dom.: ${line.otroDom} (tarifa 320 dom.)`)
+  if (line.otroInter > 0) parts.push(`Otro eq. inter.: ${line.otroInter} (tarifa 320 inter.)`)
+  return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
 export function CostAnalysisTab({
@@ -35,6 +67,7 @@ export function CostAnalysisTab({
   tcQuoteDateIso: string | null
 }) {
   const money = (n: number | null) => formatArsWithUsd(n, arsPerUsd)
+  const rampaFooterArs = rampaUsdToArs(report.rampaTotalUsd, arsPerUsd)
 
   return (
     <div className="flex flex-col gap-10">
@@ -80,6 +113,17 @@ export function CostAnalysisTab({
           <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en materiales y{' '}
           <strong>sillas de ruedas</strong> ({SWISSPORT_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
           {SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
+        </p>
+        <p className="mt-2">
+          <strong>Rampa</strong> (todas las escalas del informe): montos en USD según columna L (320/321); si en la
+          columna I aparece algún destino{' '}
+          <span className="font-mono font-bold text-[color:var(--color-ink)]">
+            {RAMPA_INTER_DESTINOS.join(', ')}
+          </span>{' '}
+          el vuelo se trata como internacional. A las tarifas dom/inter (excepto REL/RES) se suman{' '}
+          <strong>{RAMPA_ADICIONALES_USD} USD</strong> de adicionales por vuelo. <strong>REL y RES:</strong>{' '}
+          {RAMPA_REL_RES_USD} USD por vuelo (sin adicional). El equivalente en ARS usa la misma cotización BCRA del
+          encabezado.
         </p>
       </div>
 
@@ -335,6 +379,78 @@ export function CostAnalysisTab({
                   </td>
                   <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
                     <DualMoneyTotal value={report.swissportTotalArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos Rampa</h3>
+        <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+          Tarifas en USD por escala y mes; dom. 320 {RAMPA_DOM_320_USD} + {RAMPA_ADICIONALES_USD} · dom. 321{' '}
+          {RAMPA_DOM_321_USD} + {RAMPA_ADICIONALES_USD} · inter. 320 {RAMPA_INTER_320_USD} + {RAMPA_ADICIONALES_USD} ·
+          inter. 321 {RAMPA_INTER_321_USD} + {RAMPA_ADICIONALES_USD} USD por vuelo; REL/RES {RAMPA_REL_RES_USD} USD
+          (sin +{RAMPA_ADICIONALES_USD}).
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
+              <tr>
+                <th className="px-3 py-2.5 font-bold">Escala</th>
+                <th className="px-3 py-2.5 font-bold">Mes</th>
+                <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
+                <th className="px-3 py-2.5 font-bold">Detalle</th>
+                <th className="px-3 py-2.5 text-right font-bold">Importe (ARS · USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.rampaLines.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                    No hay vuelos en escalas del informe con los datos y filtros actuales.
+                  </td>
+                </tr>
+              ) : (
+                report.rampaLines.map((line) => {
+                  const arsEquiv = rampaUsdToArs(line.totalUsd, arsPerUsd)
+                  return (
+                    <tr
+                      key={`${line.escala}-${line.mesIso}`}
+                      className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
+                    >
+                      <td className="px-3 py-2 font-mono font-bold">{line.escala}</td>
+                      <td className="px-3 py-2 capitalize">{line.mesEtiqueta}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {line.vuelosTotalMes.toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-[color:var(--color-muted)]">{rampaDetalleLinea(line)}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                        {arsEquiv != null ? (
+                          formatArsWithUsd(arsEquiv, arsPerUsd)
+                        ) : (
+                          <span className="text-[color:var(--color-muted)]">{usdFmtPlain.format(line.totalUsd)}</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+            {report.rampaLines.length > 0 ? (
+              <tfoot className="bg-[color:var(--color-table-head)] font-bold">
+                <tr>
+                  <td colSpan={4} className="border-t-2 border-[color:var(--color-line)] px-3 py-3 font-black">
+                    Total Rampa
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
+                    {rampaFooterArs != null ? (
+                      <DualMoneyTotal value={rampaFooterArs} arsPerUsd={arsPerUsd} />
+                    ) : (
+                      <span className="tabular-nums">{usdFmtPlain.format(report.rampaTotalUsd)}</span>
+                    )}
                   </td>
                 </tr>
               </tfoot>
