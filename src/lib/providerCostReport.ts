@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, getDaysInMonth, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
   getProgrammingMatrixDataStartRow,
@@ -61,7 +61,7 @@ function flySegUnitForCount(n: number): number {
 }
 
 /** 1 = días 1–7, 2 = 8–14, 3 = 15–21, 4 = 22–31 */
-export function monthDayPeriod(d: Date): 1 | 2 | 3 | 4 {
+function monthDayPeriod(d: Date): 1 | 2 | 3 | 4 {
   const day = d.getDate()
   if (day <= 7) return 1
   if (day <= 14) return 2
@@ -69,23 +69,23 @@ export function monthDayPeriod(d: Date): 1 | 2 | 3 | 4 {
   return 4
 }
 
-export function monthPeriodLabel(period: 1 | 2 | 3 | 4): string {
-  if (period === 1) return 'Días 1–7'
-  if (period === 2) return 'Días 8–14'
-  if (period === 3) return 'Días 15–21'
-  return 'Días 22–31'
-}
-
+/** Una fila por escala y mes calendario. */
 export type ProviderCostLine = {
   escala: string
   mesIso: string
   mesEtiqueta: string
-  periodo: 1 | 2 | 3 | 4
-  periodoLabel: string
-  vuelos: number
-  tramoTarifa: number
-  precioUnitarioArs: number | null
-  subtotalArs: number | null
+  /** Total de vuelos en el mes (todas las franjas). */
+  vuelosTotalMes: number
+  /**
+   * Referencia: vuelos del mes × 7 / días del mes (promedio de vuelos por semana calendario).
+   */
+  promedioVuelosPorSemanaRef: number
+  /** Tramo 1–60 de la grilla usado para el precio unitario de referencia (según promedio redondeado). */
+  tramoTarifaReferencia: number
+  /** Precio unitario FlySeg del tramo de referencia (solo informativo). */
+  precioUnitarioReferenciaArs: number | null
+  /** Σ (vuelos en cada franja × tarifa unitaria de esa franja). */
+  costoTotalMesRealArs: number | null
 }
 
 export type ProviderCostReport = {
@@ -96,7 +96,9 @@ export type ProviderCostReport = {
   swissportPendingPrices: boolean
 }
 
-type AggKey = string
+type PeriodAggKey = string
+
+type PeriodCell = { escala: string; mesIso: string; mesEtiqueta: string; periodo: 1 | 2 | 3 | 4; n: number }
 
 function monthKeyAndLabel(d: Date): { mesIso: string; mesEtiqueta: string } {
   const mesIso = format(d, 'yyyy-MM')
@@ -104,13 +106,71 @@ function monthKeyAndLabel(d: Date): { mesIso: string; mesEtiqueta: string } {
   return { mesIso, mesEtiqueta }
 }
 
+function rollupToMonthLines(
+  periodMap: Map<PeriodAggKey, PeriodCell>,
+  withPricing: boolean,
+): ProviderCostLine[] {
+  const monthBuckets = new Map<
+    string,
+    { escala: string; mesIso: string; mesEtiqueta: string; counts: [number, number, number, number] }
+  >()
+
+  for (const v of periodMap.values()) {
+    const mk = `${v.escala}|${v.mesIso}`
+    let b = monthBuckets.get(mk)
+    if (!b) {
+      b = { escala: v.escala, mesIso: v.mesIso, mesEtiqueta: v.mesEtiqueta, counts: [0, 0, 0, 0] }
+      monthBuckets.set(mk, b)
+    }
+    b.counts[v.periodo - 1] = v.n
+  }
+
+  const lines: ProviderCostLine[] = []
+  for (const b of monthBuckets.values()) {
+    const [c1, c2, c3, c4] = b.counts
+    const vuelosTotalMes = c1 + c2 + c3 + c4
+    const dim = getDaysInMonth(parseISO(`${b.mesIso}-01`))
+    const promedioVuelosPorSemanaRef = dim > 0 ? (vuelosTotalMes * 7) / dim : 0
+
+    const roundedAvg = Math.round(promedioVuelosPorSemanaRef)
+    const tramoTarifaReferencia =
+      vuelosTotalMes === 0 ? 0 : Math.min(60, Math.max(1, roundedAvg === 0 ? 1 : roundedAvg))
+
+    const precioUnitarioReferenciaArs =
+      withPricing && vuelosTotalMes > 0 ? flySegUnitForCount(tramoTarifaReferencia) : null
+
+    const costoBruto =
+      c1 * flySegUnitForCount(c1) + c2 * flySegUnitForCount(c2) + c3 * flySegUnitForCount(c3) + c4 * flySegUnitForCount(c4)
+    const costoTotalMesRealArs =
+      withPricing && vuelosTotalMes > 0 ? Math.round(costoBruto * 100) / 100 : null
+
+    lines.push({
+      escala: b.escala,
+      mesIso: b.mesIso,
+      mesEtiqueta: b.mesEtiqueta,
+      vuelosTotalMes,
+      promedioVuelosPorSemanaRef: Math.round(promedioVuelosPorSemanaRef * 100) / 100,
+      tramoTarifaReferencia,
+      precioUnitarioReferenciaArs,
+      costoTotalMesRealArs,
+    })
+  }
+
+  lines.sort((a, b) => {
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.mesIso.localeCompare(b.mesIso)
+  })
+  return lines
+}
+
 /**
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
  * Solo cuenta filas con fecha válida y escala en `COST_REPORT_AIRPORTS`.
+ * Internamente usa franjas 1–7 / 8–14 / 15–21 / 22–31; el costo del mes es la suma real por franja.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
-  const flySegMap = new Map<AggKey, { escala: string; mesIso: string; mesEtiqueta: string; periodo: 1 | 2 | 3 | 4; n: number }>()
-  const swissMap = new Map<AggKey, { escala: string; mesIso: string; mesEtiqueta: string; periodo: 1 | 2 | 3 | 4; n: number }>()
+  const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
+  const swissPeriodMap = new Map<PeriodAggKey, PeriodCell>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -125,52 +185,18 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
 
     const { mesIso, mesEtiqueta } = monthKeyAndLabel(opDate)
     const periodo = monthDayPeriod(opDate)
-    const key: AggKey = `${escala}|${mesIso}|${periodo}`
+    const key: PeriodAggKey = `${escala}|${mesIso}|${periodo}`
 
-    if (SWISSPORT_AIRPORTS.has(escala)) {
-      const prev = swissMap.get(key)
-      if (prev) prev.n += 1
-      else swissMap.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
-    } else {
-      const prev = flySegMap.get(key)
-      if (prev) prev.n += 1
-      else flySegMap.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
-    }
+    const target = SWISSPORT_AIRPORTS.has(escala) ? swissPeriodMap : flySegPeriodMap
+    const prev = target.get(key)
+    if (prev) prev.n += 1
+    else target.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
   }
 
-  const toLines = (
-    map: Map<AggKey, { escala: string; mesIso: string; mesEtiqueta: string; periodo: 1 | 2 | 3 | 4; n: number }>,
-    withPricing: boolean,
-  ): ProviderCostLine[] => {
-    const lines = [...map.values()].map((v) => {
-      const tramoTarifa = Math.min(v.n, 60)
-      const precioUnitarioArs = withPricing ? flySegUnitForCount(v.n) : null
-      const subtotalArs =
-        withPricing && v.n > 0 ? Math.round(v.n * (precioUnitarioArs as number) * 100) / 100 : null
-      return {
-        escala: v.escala,
-        mesIso: v.mesIso,
-        mesEtiqueta: v.mesEtiqueta,
-        periodo: v.periodo,
-        periodoLabel: monthPeriodLabel(v.periodo),
-        vuelos: v.n,
-        tramoTarifa,
-        precioUnitarioArs,
-        subtotalArs,
-      }
-    })
-    lines.sort((a, b) => {
-      if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
-      if (a.mesIso !== b.mesIso) return a.mesIso.localeCompare(b.mesIso)
-      return a.periodo - b.periodo
-    })
-    return lines
-  }
+  const flySeg = rollupToMonthLines(flySegPeriodMap, true)
+  const swissport = rollupToMonthLines(swissPeriodMap, false)
 
-  const flySeg = toLines(flySegMap, true)
-  const swissport = toLines(swissMap, false)
-
-  const flySegTotalArs = flySeg.reduce((s, l) => s + (l.subtotalArs ?? 0), 0)
+  const flySegTotalArs = flySeg.reduce((s, l) => s + (l.costoTotalMesRealArs ?? 0), 0)
 
   return {
     flySeg,

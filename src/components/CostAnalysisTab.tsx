@@ -8,6 +8,11 @@ const ars = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 2,
 })
 
+const dec2 = new Intl.NumberFormat('es-AR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
 function money(n: number | null): string {
   if (n == null) return '—'
   return ars.format(n)
@@ -22,17 +27,23 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
         <p className="font-semibold text-[color:var(--color-ink)]">Criterio de facturación</p>
         <p className="mt-2">
           Se consideran solo las escalas: <span className="font-mono font-bold text-[color:var(--color-ink)]">{COST_REPORT_AIRPORTS.join(', ')}</span>.
-          Los vuelos se agrupan por <strong>mes calendario</strong> y por franja de días{' '}
-          <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y <strong>22–31</strong>. La tarifa unitaria
-          (por vuelo, llegada y salida) depende de la <strong>cantidad de vuelos en esa franja</strong> en esa escala; más
-          de 60 vuelos usan la tarifa de 60.
+          La tabla está agrupada por <strong>mes calendario</strong> y <strong>escala</strong>. El{' '}
+          <strong>costo total del mes</strong> es la suma de lo que corresponde a cada franja del mes (días{' '}
+          <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y <strong>22–31</strong>): en cada franja se
+          aplica la tarifa unitaria según la cantidad de vuelos <em>en esa franja</em> (más de 60 vuelos en la franja →
+          tarifa de 60).
+        </p>
+        <p className="mt-2">
+          Las columnas <strong>promedio de vuelos por semana</strong> y <strong>precio unitario (ref.)</strong> son solo
+          referencia (promedio = vuelos del mes × 7 / días del mes; precio = grilla según ese promedio redondeado). No
+          sustituyen al total del mes.
         </p>
       </div>
 
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos FlySeg</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          Escalas permitidas excepto AEP y EZE. Precio por vuelo según volumen en la franja mensual.
+          Escalas permitidas excepto AEP y EZE.
         </p>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
@@ -40,11 +51,11 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
               <tr>
                 <th className="px-3 py-2.5 font-bold">Escala</th>
                 <th className="px-3 py-2.5 font-bold">Mes</th>
-                <th className="px-3 py-2.5 font-bold">Franja (mes)</th>
-                <th className="px-3 py-2.5 text-right font-bold">Vuelos</th>
-                <th className="px-3 py-2.5 text-right font-bold">Tramo tarifa (≤60)</th>
-                <th className="px-3 py-2.5 text-right font-bold">Precio unitario</th>
-                <th className="px-3 py-2.5 text-right font-bold">Subtotal</th>
+                <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Prom. vuelos/sem. (ref.)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Tramo ref. (≤60)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Precio unit. (ref.)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Costo total mes (real)</th>
               </tr>
             </thead>
             <tbody>
@@ -57,18 +68,24 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
               ) : (
                 report.flySeg.map((row) => (
                   <tr
-                    key={`${row.escala}-${row.mesIso}-${row.periodo}`}
+                    key={`${row.escala}-${row.mesIso}`}
                     className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
                   >
                     <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
                     <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
-                    <td className="px-3 py-2">{row.periodoLabel}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {row.vuelos.toLocaleString('es-AR')}
+                      {row.vuelosTotalMes.toLocaleString('es-AR')}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.tramoTarifa.toLocaleString('es-AR')}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{money(row.precioUnitarioArs)}</td>
-                    <td className="px-3 py-2 text-right font-bold tabular-nums">{money(row.subtotalArs)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                      {dec2.format(row.promedioVuelosPorSemanaRef)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                      {row.tramoTarifaReferencia.toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                      {money(row.precioUnitarioReferenciaArs)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-bold tabular-nums">{money(row.costoTotalMesRealArs)}</td>
                   </tr>
                 ))
               )}
@@ -92,11 +109,12 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos Swissport</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          AEP y EZE. Misma lógica de franjas y conteo de vuelos; las tarifas por tramo se cargarán en una próxima versión.
+          AEP y EZE. Misma agrupación mensual y referencias de promedio; tarifas por franja pendientes.
         </p>
         {report.swissportPendingPrices ? (
           <p className="mt-2 rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
-            Precios Swissport pendientes: se muestran solo volúmenes por mes y franja.
+            Precios Swissport pendientes: se muestran volúmenes y referencias; el costo mensual real se agregará con la
+            grilla AEP/EZE.
           </p>
         ) : null}
         <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
@@ -105,30 +123,36 @@ export function CostAnalysisTab({ report }: { report: ProviderCostReport }) {
               <tr>
                 <th className="px-3 py-2.5 font-bold">Escala</th>
                 <th className="px-3 py-2.5 font-bold">Mes</th>
-                <th className="px-3 py-2.5 font-bold">Franja (mes)</th>
-                <th className="px-3 py-2.5 text-right font-bold">Vuelos</th>
-                <th className="px-3 py-2.5 text-right font-bold">Precio unitario</th>
-                <th className="px-3 py-2.5 text-right font-bold">Subtotal</th>
+                <th className="px-3 py-2.5 text-right font-bold">Vuelos (mes)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Prom. vuelos/sem. (ref.)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Tramo ref. (≤60)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Precio unit. (ref.)</th>
+                <th className="px-3 py-2.5 text-right font-bold">Costo total mes (real)</th>
               </tr>
             </thead>
             <tbody>
               {report.swissport.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                  <td colSpan={7} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
                     No hay vuelos en AEP/EZE con los datos y filtros actuales.
                   </td>
                 </tr>
               ) : (
                 report.swissport.map((row) => (
                   <tr
-                    key={`${row.escala}-${row.mesIso}-${row.periodo}`}
+                    key={`${row.escala}-${row.mesIso}`}
                     className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
                   >
                     <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
                     <td className="px-3 py-2 capitalize">{row.mesEtiqueta}</td>
-                    <td className="px-3 py-2">{row.periodoLabel}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {row.vuelos.toLocaleString('es-AR')}
+                      {row.vuelosTotalMes.toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                      {dec2.format(row.promedioVuelosPorSemanaRef)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
+                      {row.tramoTarifaReferencia.toLocaleString('es-AR')}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">Pendiente</td>
                     <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">—</td>
