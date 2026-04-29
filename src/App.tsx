@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
+import { DualMoneyTotal } from './components/DualMoneyTotal'
 import { useBcraValuacionUsd } from './hooks/useBcraValuacionUsd'
 import { downloadInformeExcel } from './lib/exportInformeExcel'
 import { formatArsWithUsd } from './lib/formatDualCurrency'
@@ -515,8 +516,8 @@ export default function App() {
                           <td colSpan={4} className="border-t border-[color:var(--color-line)] px-3 py-3">
                             Costo aprox
                           </td>
-                          <td className="border-t border-[color:var(--color-line)] px-3 py-3 font-semibold tabular-nums">
-                            {formatArsWithUsd(programmingReport.extrasItcCostoAproxArs, bcra.arsPerUsd)}
+                          <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-semibold">
+                            <DualMoneyTotal value={programmingReport.extrasItcCostoAproxArs} arsPerUsd={bcra.arsPerUsd} />
                           </td>
                         </tr>
                       </tfoot>

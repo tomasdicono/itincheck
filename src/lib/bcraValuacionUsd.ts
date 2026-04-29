@@ -40,7 +40,8 @@ type SeriesResponse = {
 
 export async function fetchBcraValuacionArsPerUsd(signal?: AbortSignal): Promise<BcraValuacionQuote> {
   const end = formatDateBuenosAires(new Date())
-  let start = addDaysIso(end, -45)
+  /** Ventana amplia: si el BCRA publica con demora, un rango corto solo con “hoy” puede quedar sin observaciones. */
+  let start = addDaysIso(end, -500)
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const url = new URL(API_BASE)
@@ -62,7 +63,7 @@ export async function fetchBcraValuacionArsPerUsd(signal?: AbortSignal): Promise
       }
       return { date, arsPerUsd }
     }
-    start = addDaysIso(start, -90)
+    start = addDaysIso(start, -400)
   }
 
   throw new Error('Sin datos de cotización en el rango consultado')

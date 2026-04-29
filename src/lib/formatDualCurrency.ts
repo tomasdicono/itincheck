@@ -21,3 +21,11 @@ export function formatArsWithUsd(n: number | null, arsPerUsd: number | null | un
   const usd = n / rate
   return `${ars} · ${usdFmt.format(usd)}`
 }
+
+export function formatArsOnly(n: number): string {
+  return arsFmt.format(n)
+}
+
+export function formatUsdFromArs(n: number, arsPerUsd: number): string {
+  return usdFmt.format(n / arsPerUsd)
+}

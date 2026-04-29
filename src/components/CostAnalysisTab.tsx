@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { DualMoneyTotal } from './DualMoneyTotal'
 import { formatArsWithUsd } from '../lib/formatDualCurrency'
 import type { ProviderCostReport } from '../lib/providerCostReport'
 import { COST_REPORT_AIRPORTS } from '../lib/providerCostReport'
@@ -43,9 +44,10 @@ export function CostAnalysisTab({
           </p>
         ) : arsPerUsd != null && tcQuoteDateIso ? (
           <p>
-            <span className="font-semibold">Equivalente en USD:</span> tipo de cambio de valuación del BCRA, serie
-            pública vía datos.gob.ar, última observación al {formatIsoToAr(tcQuoteDateIso)} (
-            {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 4 })} ARS/USD).
+            <span className="font-semibold">Equivalente en USD:</span> tipo de cambio de valuación del BCRA (serie
+            pública datos.gob.ar). Último dato publicado: {formatIsoToAr(tcQuoteDateIso)} —{' '}
+            {arsPerUsd.toLocaleString('es-AR', { maximumFractionDigits: 4 })} ARS por USD. Los totales muestran pesos y
+            dólares en líneas separadas.
           </p>
         ) : (
           <p className="text-[color:var(--color-muted)]">Sin cotización para mostrar equivalentes en USD.</p>
@@ -128,8 +130,8 @@ export function CostAnalysisTab({
                   <td colSpan={6} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
                     Total FlySeg
                   </td>
-                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
-                    {money(report.flySegTotalArs)}
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.flySegTotalArs} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>
               </tfoot>
@@ -214,7 +216,9 @@ export function CostAnalysisTab({
                       <td className="px-3 py-2.5" colSpan={3}>
                         Total
                       </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{money(b.totalMesArs)}</td>
+                      <td className="px-3 py-2.5 text-right align-top">
+                        <DualMoneyTotal value={b.totalMesArs} arsPerUsd={arsPerUsd} />
+                      </td>
                     </tr>
                   </Fragment>
                 ))
@@ -226,8 +230,8 @@ export function CostAnalysisTab({
                   <td colSpan={5} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
                     Total Swissport (AEP + EZE)
                   </td>
-                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
-                    {money(report.swissportTotalArs)}
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.swissportTotalArs} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>
               </tfoot>
