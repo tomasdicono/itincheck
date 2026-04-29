@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { CasoItcTab } from './components/CasoItcTab'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
 import { DualMoneyTotal } from './components/DualMoneyTotal'
 import { useBcraValuacionUsd } from './hooks/useBcraValuacionUsd'
@@ -29,7 +30,7 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
-  const [mainTab, setMainTab] = useState<'operativo' | 'costos'>('operativo')
+  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc'>('operativo')
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -351,6 +352,17 @@ export default function App() {
                   >
                     Análisis costos
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setMainTab('casoitc')}
+                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                      mainTab === 'casoitc'
+                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                    }`}
+                  >
+                    CASO ITC
+                  </button>
                 </div>
 
                 {mainTab === 'operativo' && (
@@ -659,6 +671,19 @@ export default function App() {
                 {mainTab === 'costos' && (
                   <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
                     <CostAnalysisTab
+                      report={providerCostReport}
+                      arsPerUsd={bcra.arsPerUsd}
+                      tcLoading={bcra.loading}
+                      tcError={bcra.error}
+                      tcQuoteDateIso={bcra.quote?.date ?? null}
+                      tcQuoteProvider={bcra.quote?.provider ?? null}
+                    />
+                  </section>
+                )}
+
+                {mainTab === 'casoitc' && (
+                  <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+                    <CasoItcTab
                       report={providerCostReport}
                       arsPerUsd={bcra.arsPerUsd}
                       tcLoading={bcra.loading}

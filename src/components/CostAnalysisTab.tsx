@@ -2,9 +2,9 @@ import { Fragment } from 'react'
 import { DualMoneyTotal } from './DualMoneyTotal'
 import { formatArsWithUsd } from '../lib/formatDualCurrency'
 import type { ProviderCostReport } from '../lib/providerCostReport'
+import { formatRampaLineDetalle } from '../lib/rampaDetalleText'
 import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
-  type RampaMonthLine,
   COST_REPORT_AIRPORTS,
   FLYSEG_SILLA_RUEDAS_UNITARIO_ARS,
   FLYSEG_SILLAS_RUEDAS_POR_VUELO,
@@ -41,23 +41,6 @@ const usdFmtPlain = new Intl.NumberFormat('es-AR', {
 function rampaUsdToArs(usd: number, arsPerUsd: number | null): number | null {
   if (arsPerUsd == null || arsPerUsd <= 0 || !Number.isFinite(arsPerUsd)) return null
   return Math.round(usd * arsPerUsd * 100) / 100
-}
-
-function rampaDetalleLinea(line: RampaMonthLine): string {
-  const parts: string[] = []
-  if (line.relRes > 0) parts.push(`REL/RES (${line.relRes} vuelos × ${RAMPA_REL_RES_USD} USD)`)
-  if (line.dom320 > 0) parts.push(`Dom 320: ${line.dom320}`)
-  if (line.dom321 > 0) parts.push(`Dom 321: ${line.dom321}`)
-  if (line.inter320 > 0) parts.push(`Inter 320: ${line.inter320}`)
-  if (line.inter321 > 0) parts.push(`Inter 321: ${line.inter321}`)
-  if (line.otroDom > 0) parts.push(`Otro eq. dom.: ${line.otroDom} (tarifa 320 dom.)`)
-  if (line.otroInter > 0) parts.push(`Otro eq. inter.: ${line.otroInter} (tarifa 320 inter.)`)
-  if (line.vuelosConDescuentoMadrugada > 0) {
-    parts.push(
-      `Desc. madrugada solo DOM, ETD 00:00–05:59 (−${(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%): ${line.vuelosConDescuentoMadrugada.toLocaleString('es-AR')} vuelos`,
-    )
-  }
-  return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
 export function CostAnalysisTab({
@@ -469,7 +452,7 @@ export function CostAnalysisTab({
                       <td className="px-3 py-2 text-right font-semibold tabular-nums">
                         {line.vuelosTotalMes.toLocaleString('es-AR')}
                       </td>
-                      <td className="px-3 py-2 text-xs text-[color:var(--color-muted)]">{rampaDetalleLinea(line)}</td>
+                      <td className="px-3 py-2 text-xs text-[color:var(--color-muted)]">{formatRampaLineDetalle(line)}</td>
                       <td className="px-3 py-2 text-right font-semibold tabular-nums">
                         {arsEquiv != null ? (
                           formatArsWithUsd(arsEquiv, arsPerUsd)

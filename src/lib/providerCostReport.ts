@@ -25,6 +25,10 @@ export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
 
+/** ITC “tarifa vieja”: doméstico 320/321 (inter sigue con tarifas Rampa actuales). */
+export const ITC_VIEJA_DOM_320_USD = 70
+export const ITC_VIEJA_DOM_321_USD = 80
+
 /** Descuento sobre la tarifa Rampa (incl. adicionales) si ETD 00:00–05:59 en vuelos DOM; no REL/RES ni inter. */
 export const RAMPA_DESCUENTO_MADRUGADA = 0.375
 
@@ -234,6 +238,12 @@ export type ProviderCostReport = {
   swissportTotalArs: number
   rampaLines: RampaMonthLine[]
   rampaTotalUsd: number
+  /** Rampa sin REL/RES, mismas tarifas y desc. madrugada que la tabla principal. */
+  itcRampaActualizadaLines: RampaMonthLine[]
+  itcRampaActualizadaTotalUsd: number
+  /** Rampa sin REL/RES: dom 70/80 + adic.; inter 1062/1261 + adic.; sin desc. madrugada. */
+  itcRampaViejaLines: RampaMonthLine[]
+  itcRampaViejaTotalUsd: number
 }
 
 type PeriodAggKey = string
@@ -455,13 +465,64 @@ function rampaEtdEnVentanaMadrugada(etd: unknown): boolean {
   return m >= 0 && m <= RAMPA_MADRUGADA_FIN_MIN
 }
 
-function rampaBumpBucket(
+type RampaTariffConfig = {
+  /** Si true, no se cuenta ningún vuelo en REL ni RES. */
+  omitRelResRows: boolean
+  /** Tarifa REL/RES cuando no se omiten filas. */
+  relResUsd: number
+  dom320Base: number
+  dom321Base: number
+  inter320Base: number
+  inter321Base: number
+  adicionalesUsd: number
+  applyMadrugadaDomDiscount: boolean
+}
+
+const RAMPA_CONFIG_FULL: RampaTariffConfig = {
+  omitRelResRows: false,
+  relResUsd: RAMPA_REL_RES_USD,
+  dom320Base: RAMPA_DOM_320_USD,
+  dom321Base: RAMPA_DOM_321_USD,
+  inter320Base: RAMPA_INTER_320_USD,
+  inter321Base: RAMPA_INTER_321_USD,
+  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  applyMadrugadaDomDiscount: true,
+}
+
+const RAMPA_CONFIG_ITC_ACTUAL: RampaTariffConfig = {
+  omitRelResRows: true,
+  relResUsd: RAMPA_REL_RES_USD,
+  dom320Base: RAMPA_DOM_320_USD,
+  dom321Base: RAMPA_DOM_321_USD,
+  inter320Base: RAMPA_INTER_320_USD,
+  inter321Base: RAMPA_INTER_321_USD,
+  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  applyMadrugadaDomDiscount: true,
+}
+
+const RAMPA_CONFIG_ITC_VIEJA: RampaTariffConfig = {
+  omitRelResRows: true,
+  relResUsd: RAMPA_REL_RES_USD,
+  dom320Base: ITC_VIEJA_DOM_320_USD,
+  dom321Base: ITC_VIEJA_DOM_321_USD,
+  inter320Base: RAMPA_INTER_320_USD,
+  inter321Base: RAMPA_INTER_321_USD,
+  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  applyMadrugadaDomDiscount: false,
+}
+
+function rampaBumpBucketWithConfig(
   map: Map<RampaBucketKey, RampaBucketAgg>,
   escala: string,
   mesIso: string,
   mesEtiqueta: string,
   row: unknown[],
+  cfg: RampaTariffConfig,
 ): void {
+  if (cfg.omitRelResRows && (escala === 'REL' || escala === 'RES')) {
+    return
+  }
+
   const key: RampaBucketKey = `${escala}|${mesIso}`
   let b = map.get(key)
   if (!b) {
@@ -484,17 +545,17 @@ function rampaBumpBucket(
 
   if (escala === 'REL' || escala === 'RES') {
     b.relRes += 1
-    b.totalUsdAccum += RAMPA_REL_RES_USD
+    b.totalUsdAccum += cfg.relResUsd
     return
   }
 
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
 
-  const packDom = RAMPA_DOM_320_USD + RAMPA_ADICIONALES_USD
-  const pack321Dom = RAMPA_DOM_321_USD + RAMPA_ADICIONALES_USD
-  const packInter = RAMPA_INTER_320_USD + RAMPA_ADICIONALES_USD
-  const pack321Inter = RAMPA_INTER_321_USD + RAMPA_ADICIONALES_USD
+  const packDom = cfg.dom320Base + cfg.adicionalesUsd
+  const pack321Dom = cfg.dom321Base + cfg.adicionalesUsd
+  const packInter = cfg.inter320Base + cfg.adicionalesUsd
+  const pack321Inter = cfg.inter321Base + cfg.adicionalesUsd
 
   let baseUsd = 0
   if (eq === '321') {
@@ -512,7 +573,7 @@ function rampaBumpBucket(
   }
 
   const madrugada = rampaEtdEnVentanaMadrugada(row[COL_ETD])
-  const descMadrugadaDom = madrugada && !inter
+  const descMadrugadaDom = cfg.applyMadrugadaDomDiscount && madrugada && !inter
   if (descMadrugadaDom) {
     b.vuelosConDescuentoMadrugada += 1
   }
@@ -567,6 +628,8 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   const swissBuckets = new Map<SwissBucketKey, SwissBucket>()
   const swissFlightLists = new Map<SwissBucketKey, SwissFlightDetail[]>()
   const rampaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
+  const itcRampaActualBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
+  const itcRampaViejaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -581,7 +644,9 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
 
     const { mesIso, mesEtiqueta } = monthKeyAndLabel(opDate)
 
-    rampaBumpBucket(rampaBuckets, escala, mesIso, mesEtiqueta, row)
+    rampaBumpBucketWithConfig(rampaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_FULL)
+    rampaBumpBucketWithConfig(itcRampaActualBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_ACTUAL)
+    rampaBumpBucketWithConfig(itcRampaViejaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_VIEJA)
 
     if (SWISSPORT_AIRPORTS.has(escala)) {
       const ap = escala as 'AEP' | 'EZE'
@@ -647,6 +712,12 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   const rampaLines = buildRampaLinesFromBuckets(rampaBuckets)
   const rampaTotalUsd = Math.round(rampaLines.reduce((s, l) => s + l.totalUsd, 0) * 100) / 100
 
+  const itcRampaActualizadaLines = buildRampaLinesFromBuckets(itcRampaActualBuckets)
+  const itcRampaActualizadaTotalUsd =
+    Math.round(itcRampaActualizadaLines.reduce((s, l) => s + l.totalUsd, 0) * 100) / 100
+  const itcRampaViejaLines = buildRampaLinesFromBuckets(itcRampaViejaBuckets)
+  const itcRampaViejaTotalUsd = Math.round(itcRampaViejaLines.reduce((s, l) => s + l.totalUsd, 0) * 100) / 100
+
   return {
     flySeg,
     flySegTotalPasadasArs,
@@ -660,5 +731,9 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     swissportTotalArs,
     rampaLines,
     rampaTotalUsd,
+    itcRampaActualizadaLines,
+    itcRampaActualizadaTotalUsd,
+    itcRampaViejaLines,
+    itcRampaViejaTotalUsd,
   }
 }
