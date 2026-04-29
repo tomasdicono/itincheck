@@ -169,9 +169,25 @@ export function CostAnalysisTab({
               <tfoot className="bg-[color:var(--color-table-head)] font-bold">
                 <tr>
                   <td colSpan={6} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
-                    Total FlySeg
+                    Total pasadas
                   </td>
                   <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.flySegTotalPasadasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total sillas de rueda
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.flySegTotalSillasRuedasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="border-t border-[color:var(--color-line)] px-3 py-3 font-black">
+                    Total FlySeg
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
                     <DualMoneyTotal value={report.flySegTotalArs} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>
@@ -283,9 +299,41 @@ export function CostAnalysisTab({
               <tfoot className="bg-[color:var(--color-table-head)] font-bold">
                 <tr>
                   <td colSpan={5} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
-                    Total Swissport (AEP + EZE)
+                    Total pasadas
                   </td>
                   <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.swissportTotalPasadasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={5} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total simultaneidades
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.swissportTotalSimultaneidadArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={5} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total materiales
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.swissportTotalMaterialesArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={5} className="border-t border-[color:var(--color-line)] px-3 py-3">
+                    Total sillas de ruedas
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top">
+                    <DualMoneyTotal value={report.swissportTotalSillasRuedasArs} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={5} className="border-t border-[color:var(--color-line)] px-3 py-3 font-black">
+                    Total Swissport (AEP + EZE)
+                  </td>
+                  <td className="border-t border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
                     <DualMoneyTotal value={report.swissportTotalArs} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>

@@ -180,8 +180,18 @@ export type SwissportMonthBlock = {
 
 export type ProviderCostReport = {
   flySeg: ProviderCostLine[]
+  /** Suma de costos por franjas (tarifas) de todas las líneas FlySeg. */
+  flySegTotalPasadasArs: number
+  /** Suma de sillas de ruedas de todas las líneas FlySeg. */
+  flySegTotalSillasRuedasArs: number
+  /** Suma de pasadas + sillas (mismo criterio que el pie de tabla en 3 filas). */
   flySegTotalArs: number
   swissportBlocks: SwissportMonthBlock[]
+  swissportTotalPasadasArs: number
+  swissportTotalSimultaneidadArs: number
+  swissportTotalMaterialesArs: number
+  swissportTotalSillasRuedasArs: number
+  /** Suma de los cuatro conceptos (criterio del pie en varias filas). */
   swissportTotalArs: number
 }
 
@@ -428,13 +438,46 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   const flySeg = rollupToMonthLines(flySegPeriodMap, true)
   const swissportBlocks = buildSwissportBlocksFromBuckets(swissBuckets, swissFlightLists)
 
-  const flySegTotalArs = flySeg.reduce((s, l) => s + (l.costoTotalMesRealArs ?? 0), 0)
-  const swissportTotalArs = swissportBlocks.reduce((s, b) => s + b.totalMesArs, 0)
+  const flySegTotalPasadasArs = Math.round(
+    flySeg.reduce((s, l) => s + (l.costoFranjasArs ?? 0), 0) * 100,
+  ) / 100
+  const flySegTotalSillasRuedasArs = Math.round(
+    flySeg.reduce((s, l) => s + l.costoSillasRuedasArs, 0) * 100,
+  ) / 100
+  const flySegTotalArs =
+    Math.round((flySegTotalPasadasArs + flySegTotalSillasRuedasArs) * 100) / 100
+
+  const swissportTotalPasadasArs = Math.round(
+    swissportBlocks.reduce((s, b) => s + b.costoPasadasArs, 0) * 100,
+  ) / 100
+  const swissportTotalSimultaneidadArs = Math.round(
+    swissportBlocks.reduce((s, b) => s + b.costoSimultaneidadArs, 0) * 100,
+  ) / 100
+  const swissportTotalMaterialesArs = Math.round(
+    swissportBlocks.reduce((s, b) => s + b.costoMaterialesArs, 0) * 100,
+  ) / 100
+  const swissportTotalSillasRuedasArs = Math.round(
+    swissportBlocks.reduce((s, b) => s + b.costoSillasRuedasArs, 0) * 100,
+  ) / 100
+  const swissportTotalArs =
+    Math.round(
+      (swissportTotalPasadasArs +
+        swissportTotalSimultaneidadArs +
+        swissportTotalMaterialesArs +
+        swissportTotalSillasRuedasArs) *
+        100,
+    ) / 100
 
   return {
     flySeg,
-    flySegTotalArs: Math.round(flySegTotalArs * 100) / 100,
+    flySegTotalPasadasArs,
+    flySegTotalSillasRuedasArs,
+    flySegTotalArs,
     swissportBlocks,
-    swissportTotalArs: Math.round(swissportTotalArs * 100) / 100,
+    swissportTotalPasadasArs,
+    swissportTotalSimultaneidadArs,
+    swissportTotalMaterialesArs,
+    swissportTotalSillasRuedasArs,
+    swissportTotalArs,
   }
 }
