@@ -14,7 +14,26 @@ const COL_ETD = 3
 const COL_ESCALA = 7
 /** Destino (Excel columna I): usado para clasificar vuelos internacionales en costos Rampa. */
 const COL_DESTINO = 8
+/** Operador (Excel columna J): filtros para Swissport e ITC. */
+const COL_OPERADOR = 9
 const COL_MATERIAL = 11
+
+function programmingOperadorCodigo(row: unknown[]): string {
+  return String(row[COL_OPERADOR] ?? '')
+    .trim()
+    .toUpperCase()
+}
+
+/** Swissport (AEP/EZE): no contar vuelos con operador JA ni JZ (columna J). */
+function operadorExcluyeSwissport(row: unknown[]): boolean {
+  const o = programmingOperadorCodigo(row)
+  return o === 'JA' || o === 'JZ'
+}
+
+/** Caso ITC (Rampa ITC): no contar vuelos con operador JA; JZ sí entra. */
+function operadorExcluyeItc(row: unknown[]): boolean {
+  return programmingOperadorCodigo(row) === 'JA'
+}
 
 /** Costos Rampa (USD por vuelo, escalas distintas de REL/RES). */
 export const RAMPA_DOM_320_USD = 223
@@ -726,12 +745,14 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
 /**
  * Costos por proveedor a partir de la matriz ya filtrada (mismos filtros que operativo).
  * FlySeg: franjas 1–7 / 8–14 / 15–21 / 22–31; total mes = suma real por franja.
- * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
+ * Swissport (AEP/EZE): mismos brackets y reglas, pero solo filas con operador col. J distinto de JA y JZ (WJ, etc.).
+ * Brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
  * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
  * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE. CRD no entra en FlySeg:
  * va a NFS (tarifa por vuelos semanales + materiales + mismas sillas WCH que FlySeg).
- * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
+ * Rampa (tabla principal): USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
  * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
+ * Caso ITC (líneas ITC): además no se cuentan vuelos con operador JA en col. J (JZ sí).
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
@@ -756,27 +777,31 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     const { mesIso, mesEtiqueta } = monthKeyAndLabel(opDate)
 
     rampaBumpBucketWithConfig(rampaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_FULL)
-    rampaBumpBucketWithConfig(itcRampaActualBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_ACTUAL)
-    rampaBumpBucketWithConfig(itcRampaViejaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_VIEJA)
+    if (!operadorExcluyeItc(row)) {
+      rampaBumpBucketWithConfig(itcRampaActualBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_ACTUAL)
+      rampaBumpBucketWithConfig(itcRampaViejaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_VIEJA)
+    }
 
     if (SWISSPORT_AIRPORTS.has(escala)) {
-      const ap = escala as 'AEP' | 'EZE'
-      const key: SwissBucketKey = `${ap}|${mesIso}`
-      let b = swissBuckets.get(key)
-      if (!b) {
-        b = { escala: ap, mesIso, mesEtiqueta, vuelos: 0, vuelos321: 0 }
-        swissBuckets.set(key, b)
-      }
-      b.vuelos += 1
-      if (detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321') b.vuelos321 += 1
+      if (!operadorExcluyeSwissport(row)) {
+        const ap = escala as 'AEP' | 'EZE'
+        const key: SwissBucketKey = `${ap}|${mesIso}`
+        let b = swissBuckets.get(key)
+        if (!b) {
+          b = { escala: ap, mesIso, mesEtiqueta, vuelos: 0, vuelos321: 0 }
+          swissBuckets.set(key, b)
+        }
+        b.vuelos += 1
+        if (detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321') b.vuelos321 += 1
 
-      const list = swissFlightLists.get(key) ?? []
-      list.push({
-        dayIso: format(opDate, 'yyyy-MM-dd'),
-        etdMinFromMidnight: programmingRowEtdMinutesFromMidnight(row[COL_ETD]),
-        is321: detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321',
-      })
-      swissFlightLists.set(key, list)
+        const list = swissFlightLists.get(key) ?? []
+        list.push({
+          dayIso: format(opDate, 'yyyy-MM-dd'),
+          etdMinFromMidnight: programmingRowEtdMinutesFromMidnight(row[COL_ETD]),
+          is321: detectProgrammingEquipamiento(row[COL_MATERIAL]) === '321',
+        })
+        swissFlightLists.set(key, list)
+      }
       continue
     }
 

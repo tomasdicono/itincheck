@@ -136,12 +136,14 @@ export function CostAnalysisTab({
           {FLYSEG_SILLAS_RUEDAS_POR_VUELO} × ${FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
         </p>
         <p className="mt-2">
-          <strong>Swissport</strong> (AEP y EZE): se factura por <strong>cantidad de vuelos del mes</strong> según
-          brackets de pasada; cada vuelo en <strong>321</strong> (columna L) suma <strong>+20%</strong> sobre el valor de
-          la pasada. <strong>Simultaneidades</strong> (mismo día, STD/ETD columna D a ≤59 min de distancia):{' '}
-          <strong>+10%</strong> sobre la pasada de cada vuelo afectado si en el grupo hay 2 o 3 vuelos;{' '}
-          <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en materiales y{' '}
-          <strong>sillas de ruedas</strong> ({SWISSPORT_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
+          <strong>Swissport</strong> (AEP y EZE): solo entran vuelos cuyo operador en <strong>columna J</strong> no sea{' '}
+          <span className="font-mono font-bold">JA</span> ni <span className="font-mono font-bold">JZ</span> (queda p. ej.{' '}
+          <span className="font-mono font-bold">WJ</span> y otros códigos distintos de esos dos). Se factura por{' '}
+          <strong>cantidad de vuelos del mes</strong> según brackets de pasada; cada vuelo en <strong>321</strong>{' '}
+          (columna L) suma <strong>+20%</strong> sobre el valor de la pasada. <strong>Simultaneidades</strong> (mismo día,
+          STD/ETD columna D a ≤59 min de distancia): <strong>+10%</strong> sobre la pasada de cada vuelo afectado si en el
+          grupo hay 2 o 3 vuelos; <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en
+          materiales y <strong>sillas de ruedas</strong> ({SWISSPORT_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
           {SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
         </p>
         <p className="mt-2">
@@ -157,6 +159,11 @@ export function CostAnalysisTab({
           tarifa de ese vuelo (tarifa + adicionales) lleva un{' '}
           <strong>−{(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%</strong>; en <strong>internacionales</strong>{' '}
           no aplica ese descuento. El equivalente en ARS usa la misma cotización USD del encabezado.
+        </p>
+        <p className="mt-2">
+          <strong>CASO ITC</strong> (pestaña dedicada): mismas reglas de Rampa en esas tablas, pero sin contar vuelos con
+          operador <span className="font-mono font-bold">JA</span> en columna J (<span className="font-mono font-bold">JZ</span>{' '}
+          sí se incluye).
         </p>
       </div>
 
@@ -410,8 +417,8 @@ export function CostAnalysisTab({
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos Swissport</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          AEP y EZE: por cada mes se muestran pasadas (base +321), recargo simultaneidades, materiales, sillas de ruedas y
-          total.
+          AEP y EZE, excluyendo vuelos con operador JA o JZ en columna J. Por cada mes: pasadas (base +321), recargo
+          simultaneidades, materiales, sillas de ruedas y total.
         </p>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
