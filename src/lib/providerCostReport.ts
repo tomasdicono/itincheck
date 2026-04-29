@@ -38,8 +38,9 @@ function operadorExcluyeItc(row: unknown[]): boolean {
 /** Costos Rampa (USD por vuelo, escalas distintas de REL/RES). */
 export const RAMPA_DOM_320_USD = 223
 export const RAMPA_DOM_321_USD = 262
-export const RAMPA_INTER_320_USD = 1062
-export const RAMPA_INTER_321_USD = 1261
+export const RAMPA_INTER_320_USD = 1544
+export const RAMPA_INTER_321_USD = 1743
+/** Suma solo a tarifas domésticas 320/321; internacional va con listado completo (sin +31). */
 export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
@@ -287,7 +288,7 @@ export type ProviderCostReport = {
   /** Rampa sin REL/RES, mismas tarifas y desc. madrugada que la tabla principal. */
   itcRampaActualizadaLines: RampaMonthLine[]
   itcRampaActualizadaTotalUsd: number
-  /** Rampa sin REL/RES: dom 70/80 + adic.; inter 1062/1261 + adic.; sin desc. madrugada. */
+  /** Rampa sin REL/RES: dom 70/80 + adic.; inter listado (sin +31 adic.); sin desc. madrugada. */
   itcRampaViejaLines: RampaMonthLine[]
   itcRampaViejaTotalUsd: number
 }
@@ -567,7 +568,7 @@ type RampaBucketAgg = {
   escala: string
   mesIso: string
   mesEtiqueta: string
-  /** Suma USD por vuelo (tarifa + adicionales; desc. madrugada solo DOM). */
+  /** Suma USD por vuelo (dom: tarifa + adic.; inter: tarifa lista; desc. madrugada solo DOM). */
   totalUsdAccum: number
   dom320: number
   dom321: number
@@ -602,7 +603,9 @@ type RampaTariffConfig = {
   dom321Base: number
   inter320Base: number
   inter321Base: number
-  adicionalesUsd: number
+  adicionalesDomUsd: number
+  /** 0 = tarifa inter ya es total (no se suman los 31 USD). */
+  adicionalesInterUsd: number
   applyMadrugadaDomDiscount: boolean
 }
 
@@ -613,7 +616,8 @@ const RAMPA_CONFIG_FULL: RampaTariffConfig = {
   dom321Base: RAMPA_DOM_321_USD,
   inter320Base: RAMPA_INTER_320_USD,
   inter321Base: RAMPA_INTER_321_USD,
-  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  adicionalesDomUsd: RAMPA_ADICIONALES_USD,
+  adicionalesInterUsd: 0,
   applyMadrugadaDomDiscount: true,
 }
 
@@ -624,7 +628,8 @@ const RAMPA_CONFIG_ITC_ACTUAL: RampaTariffConfig = {
   dom321Base: RAMPA_DOM_321_USD,
   inter320Base: RAMPA_INTER_320_USD,
   inter321Base: RAMPA_INTER_321_USD,
-  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  adicionalesDomUsd: RAMPA_ADICIONALES_USD,
+  adicionalesInterUsd: 0,
   applyMadrugadaDomDiscount: true,
 }
 
@@ -635,7 +640,8 @@ const RAMPA_CONFIG_ITC_VIEJA: RampaTariffConfig = {
   dom321Base: ITC_VIEJA_DOM_321_USD,
   inter320Base: RAMPA_INTER_320_USD,
   inter321Base: RAMPA_INTER_321_USD,
-  adicionalesUsd: RAMPA_ADICIONALES_USD,
+  adicionalesDomUsd: RAMPA_ADICIONALES_USD,
+  adicionalesInterUsd: 0,
   applyMadrugadaDomDiscount: false,
 }
 
@@ -680,10 +686,10 @@ function rampaBumpBucketWithConfig(
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
 
-  const packDom = cfg.dom320Base + cfg.adicionalesUsd
-  const pack321Dom = cfg.dom321Base + cfg.adicionalesUsd
-  const packInter = cfg.inter320Base + cfg.adicionalesUsd
-  const pack321Inter = cfg.inter321Base + cfg.adicionalesUsd
+  const packDom = cfg.dom320Base + cfg.adicionalesDomUsd
+  const pack321Dom = cfg.dom321Base + cfg.adicionalesDomUsd
+  const packInter = cfg.inter320Base + cfg.adicionalesInterUsd
+  const pack321Inter = cfg.inter321Base + cfg.adicionalesInterUsd
 
   let baseUsd = 0
   if (eq === '321') {

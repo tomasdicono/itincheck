@@ -152,11 +152,13 @@ export function CostAnalysisTab({
           <span className="font-mono font-bold text-[color:var(--color-ink)]">
             {RAMPA_INTER_DESTINOS.join(', ')}
           </span>{' '}
-          el vuelo se trata como internacional. A las tarifas dom/inter (excepto REL/RES) se suman{' '}
-          <strong>{RAMPA_ADICIONALES_USD} USD</strong> de adicionales por vuelo. <strong>REL y RES:</strong>{' '}
-          {RAMPA_REL_RES_USD} USD por vuelo (sin adicional). En vuelos <strong>domésticos</strong> (no internacional por
-          col. I), si el ETD (columna D) está entre <strong>00:00 y 05:59</strong> y la escala no es REL ni RES, la
-          tarifa de ese vuelo (tarifa + adicionales) lleva un{' '}
+          el vuelo se trata como internacional. En <strong>doméstico</strong> (excepto REL/RES) se suman{' '}
+          <strong>{RAMPA_ADICIONALES_USD} USD</strong> de adicionales por vuelo a la tarifa 320/321; en{' '}
+          <strong>internacional</strong> las tarifas listadas ({RAMPA_INTER_320_USD} / {RAMPA_INTER_321_USD} USD) ya
+          incluyen todo (no se suman adicionales). <strong>REL y RES:</strong> {RAMPA_REL_RES_USD} USD por vuelo (sin
+          adicional). En vuelos <strong>domésticos</strong> (no internacional por col. I), si el ETD (columna D) está
+          entre <strong>00:00 y 05:59</strong> y la escala no es REL ni RES, la tarifa de ese vuelo (tarifa + adicionales)
+          lleva un{' '}
           <strong>−{(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%</strong>; en <strong>internacionales</strong>{' '}
           no aplica ese descuento. El equivalente en ARS usa la misma cotización USD del encabezado.
         </p>
@@ -564,8 +566,8 @@ export function CostAnalysisTab({
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos Rampa</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Tarifas en USD por escala y mes; dom. 320 {RAMPA_DOM_320_USD} + {RAMPA_ADICIONALES_USD} · dom. 321{' '}
-          {RAMPA_DOM_321_USD} + {RAMPA_ADICIONALES_USD} · inter. 320 {RAMPA_INTER_320_USD} + {RAMPA_ADICIONALES_USD} ·
-          inter. 321 {RAMPA_INTER_321_USD} + {RAMPA_ADICIONALES_USD} USD por vuelo; REL/RES {RAMPA_REL_RES_USD} USD
+          {RAMPA_DOM_321_USD} + {RAMPA_ADICIONALES_USD} · inter. 320 {RAMPA_INTER_320_USD} · inter. 321{' '}
+          {RAMPA_INTER_321_USD} (internacional sin sumar adicionales; ya incluidos). REL/RES {RAMPA_REL_RES_USD} USD
           (sin +{RAMPA_ADICIONALES_USD}). ETD 00:00–05:59, solo <strong>DOM</strong> (no REL/RES): −
           {(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}% sobre tarifa + adicionales; inter sin descuento
           madrugada.

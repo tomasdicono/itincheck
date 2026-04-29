@@ -137,13 +137,13 @@ export function CasoItcTab({
 
   const descActual =
     `Sin escalas REL ni RES. No se incluyen vuelos con operador JA en columna J (JZ sí). Mismas tarifas que Costos Rampa: dom. 320 ${RAMPA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} · dom. 321 ` +
-    `${RAMPA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD} · inter. 320 ${RAMPA_INTER_320_USD} + ${RAMPA_ADICIONALES_USD} · inter. 321 ` +
-    `${RAMPA_INTER_321_USD} + ${RAMPA_ADICIONALES_USD} USD por vuelo. Clasificación inter: columna I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. ` +
+    `${RAMPA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD} · inter. 320 ${RAMPA_INTER_320_USD} · inter. 321 ${RAMPA_INTER_321_USD} USD por vuelo (inter sin +${RAMPA_ADICIONALES_USD}). ` +
+    `Clasificación inter: columna I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. ` +
     `ETD 00:00–05:59 solo DOM: −${(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}% sobre tarifa + adicionales.`
 
   const descVieja =
     `Sin REL/RES; sin operador JA en columna J (JZ sí). Dom. 320 ${ITC_VIEJA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} · dom. 321 ${ITC_VIEJA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD} · ` +
-    `inter. 320 ${RAMPA_INTER_320_USD} + ${RAMPA_ADICIONALES_USD} · inter. 321 ${RAMPA_INTER_321_USD} + ${RAMPA_ADICIONALES_USD} USD por vuelo. ` +
+    `inter. 320 ${RAMPA_INTER_320_USD} · inter. 321 ${RAMPA_INTER_321_USD} USD por vuelo (inter sin +${RAMPA_ADICIONALES_USD}). ` +
     `Otros equipamientos: misma regla que Rampa (tarifa 320 dom./inter.). Sin descuento madrugada.`
 
   return (
