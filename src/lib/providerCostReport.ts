@@ -25,6 +25,11 @@ export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
 
+/** Descuento sobre la tarifa Rampa (incl. adicionales) si ETD 00:00–05:59; no aplica a REL/RES. */
+export const RAMPA_DESCUENTO_MADRUGADA = 0.375
+
+const RAMPA_MADRUGADA_FIN_MIN = 5 * 60 + 59
+
 /** Destinos en columna I que clasifican el vuelo como internacional para Rampa. */
 export const RAMPA_INTER_DESTINOS = ['LIM', 'SCL', 'NAT', 'REC', 'GIG', 'FLN', 'IQQ', 'ASU'] as const
 
@@ -208,6 +213,8 @@ export type RampaMonthLine = {
   otroDom: number
   otroInter: number
   relRes: number
+  /** Vuelos (no REL/RES) con ETD 00:00–05:59 y −37,5 % sobre tarifa + adicionales. */
+  vuelosConDescuentoMadrugada: number
 }
 
 export type ProviderCostReport = {
@@ -422,6 +429,8 @@ type RampaBucketAgg = {
   escala: string
   mesIso: string
   mesEtiqueta: string
+  /** Suma USD por vuelo (tarifa + adicionales, con descuento madrugada si aplica). */
+  totalUsdAccum: number
   dom320: number
   dom321: number
   inter320: number
@@ -429,6 +438,7 @@ type RampaBucketAgg = {
   otroDom: number
   otroInter: number
   relRes: number
+  vuelosConDescuentoMadrugada: number
 }
 
 function rampaInternacionalDesdeColumnaI(destino: unknown): boolean {
@@ -437,6 +447,12 @@ function rampaInternacionalDesdeColumnaI(destino: unknown): boolean {
     .match(/[A-Z]{3}/g)
   if (!codes?.length) return false
   return codes.some((c) => RAMPA_INTER_DESTINO_CODES.has(c))
+}
+
+function rampaEtdEnVentanaMadrugada(etd: unknown): boolean {
+  const m = programmingRowEtdMinutesFromMidnight(etd)
+  if (m == null) return false
+  return m >= 0 && m <= RAMPA_MADRUGADA_FIN_MIN
 }
 
 function rampaBumpBucket(
@@ -453,6 +469,7 @@ function rampaBumpBucket(
       escala,
       mesIso,
       mesEtiqueta,
+      totalUsdAccum: 0,
       dom320: 0,
       dom321: 0,
       inter320: 0,
@@ -460,51 +477,56 @@ function rampaBumpBucket(
       otroDom: 0,
       otroInter: 0,
       relRes: 0,
+      vuelosConDescuentoMadrugada: 0,
     }
     map.set(key, b)
   }
 
   if (escala === 'REL' || escala === 'RES') {
     b.relRes += 1
+    b.totalUsdAccum += RAMPA_REL_RES_USD
     return
   }
 
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
-  if (eq === '321') {
-    if (inter) b.inter321 += 1
-    else b.dom321 += 1
-  } else if (eq === '320') {
-    if (inter) b.inter320 += 1
-    else b.dom320 += 1
-  } else {
-    if (inter) b.otroInter += 1
-    else b.otroDom += 1
-  }
-}
 
-function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): RampaMonthLine[] {
   const packDom = RAMPA_DOM_320_USD + RAMPA_ADICIONALES_USD
   const pack321Dom = RAMPA_DOM_321_USD + RAMPA_ADICIONALES_USD
   const packInter = RAMPA_INTER_320_USD + RAMPA_ADICIONALES_USD
   const pack321Inter = RAMPA_INTER_321_USD + RAMPA_ADICIONALES_USD
 
+  let baseUsd = 0
+  if (eq === '321') {
+    baseUsd = inter ? pack321Inter : pack321Dom
+    if (inter) b.inter321 += 1
+    else b.dom321 += 1
+  } else if (eq === '320') {
+    baseUsd = inter ? packInter : packDom
+    if (inter) b.inter320 += 1
+    else b.dom320 += 1
+  } else {
+    baseUsd = inter ? packInter : packDom
+    if (inter) b.otroInter += 1
+    else b.otroDom += 1
+  }
+
+  const madrugada = rampaEtdEnVentanaMadrugada(row[COL_ETD])
+  if (madrugada) {
+    b.vuelosConDescuentoMadrugada += 1
+  }
+  const factor = madrugada ? 1 - RAMPA_DESCUENTO_MADRUGADA : 1
+  b.totalUsdAccum += Math.round(baseUsd * factor * 100) / 100
+}
+
+function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): RampaMonthLine[] {
   const lines: RampaMonthLine[] = []
   for (const b of map.values()) {
     const vuelos =
       b.dom320 + b.dom321 + b.inter320 + b.inter321 + b.otroDom + b.otroInter + b.relRes
     if (vuelos === 0) continue
 
-    const totalUsdRaw =
-      b.relRes * RAMPA_REL_RES_USD +
-      b.dom320 * packDom +
-      b.dom321 * pack321Dom +
-      b.inter320 * packInter +
-      b.inter321 * pack321Inter +
-      b.otroDom * packDom +
-      b.otroInter * packInter
-
-    const totalUsd = Math.round(totalUsdRaw * 100) / 100
+    const totalUsd = Math.round(b.totalUsdAccum * 100) / 100
 
     lines.push({
       escala: b.escala,
@@ -519,6 +541,7 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
       otroDom: b.otroDom,
       otroInter: b.otroInter,
       relRes: b.relRes,
+      vuelosConDescuentoMadrugada: b.vuelosConDescuentoMadrugada,
     })
   }
 
@@ -535,7 +558,8 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * Swissport (AEP/EZE): brackets por vuelos del mes, +20% pasada si 321 (col. L), simultaneidad STD (|ETD−ETD|≤59 min
  * mismo día: +10% pasada si 2–3 vuelos en el grupo, +30% si ≥4), materiales por vuelo, sillas de ruedas (2 por vuelo).
  * FlySeg: además de franjas, sillas de ruedas (1 por vuelo) con arancel distinto al de AEP/EZE.
- * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana).
+ * Rampa: USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
+ * 00:00–05:59 (excepto REL/RES): −37,5 % sobre tarifa + adicionales.
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
