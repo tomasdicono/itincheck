@@ -74,7 +74,7 @@ export const FLYSEG_SILLAS_RUEDAS_POR_VUELO = 1
 export const SWISSPORT_SILLAS_RUEDAS_POR_VUELO = 2
 
 /** Sillas de ruedas: ARS unitario (FlySeg, escalas fuera de AEP/EZE). */
-export const FLYSEG_SILLA_RUEDAS_UNITARIO_ARS = 55_418
+export const FLYSEG_SILLA_RUEDAS_UNITARIO_ARS = 63_730.70
 
 /** CRD (proveedor NFS): materiales fijos por vuelo (ARS). */
 export const NFS_CRD_MATERIALES_POR_VUELO_ARS = 32_580
@@ -113,29 +113,29 @@ type SwissBracket = { min: number; max: number | null; unit: number; label: stri
 
 /** Precio por pasada según vuelos del mes (brackets Swissport AEP). */
 const AEP_SWISS_BRACKETS: SwissBracket[] = [
-  { min: 133, max: 196, unit: 425_949, label: '133–196' },
-  { min: 197, max: 261, unit: 407_126, label: '197–261' },
-  { min: 262, max: 390, unit: 389_133, label: '262–390' },
-  { min: 391, max: 519, unit: 371_942, label: '391–519' },
-  { min: 520, max: 691, unit: 354_823, label: '520–691' },
-  { min: 692, max: 820, unit: 348_439, label: '692–820' },
-  { min: 821, max: 992, unit: 343_209, label: '821–992' },
-  { min: 993, max: 1164, unit: 339_777, label: '993–1164' },
-  { min: 1165, max: 1336, unit: 336_381, label: '1165–1336' },
-  { min: 1337, max: null, unit: 333_019, label: '1337+' },
+  { min: 133, max: 196, unit: 489_841.5, label: '133–196' },
+  { min: 197, max: 261, unit: 468_195, label: '197–261' },
+  { min: 262, max: 390, unit: 447_503.5, label: '262–390' },
+  { min: 391, max: 519, unit: 427_733.5, label: '391–519' },
+  { min: 520, max: 691, unit: 408_046.5, label: '520–691' },
+  { min: 692, max: 820, unit: 400_705, label: '692–820' },
+  { min: 821, max: 992, unit: 394_691, label: '821–992' },
+  { min: 993, max: 1164, unit: 390_743.5, label: '993–1164' },
+  { min: 1165, max: 1336, unit: 386_838, label: '1165–1336' },
+  { min: 1337, max: null, unit: 382_972.5, label: '1337+' },
 ]
 
 const EZE_SWISS_BRACKETS: SwissBracket[] = [
-  { min: 133, max: 196, unit: 368_003, label: '133–196' },
-  { min: 197, max: 261, unit: 335_360, label: '197–261' },
-  { min: 262, max: 390, unit: 305_660, label: '262–390' },
-  { min: 391, max: 519, unit: 296_492, label: '391–519' },
-  { min: 520, max: 691, unit: 287_599, label: '520–691' },
-  { min: 692, max: 820, unit: 278_970, label: '692–820' },
-  { min: 821, max: 992, unit: 270_601, label: '821–992' },
-  { min: 993, max: 1164, unit: 262_481, label: '993–1164' },
-  { min: 1165, max: 1336, unit: 254_608, label: '1165–1336' },
-  { min: 1337, max: null, unit: 246_971, label: '1337+' },
+  { min: 133, max: 196, unit: 423_204, label: '133–196' },
+  { min: 197, max: 261, unit: 385_664, label: '197–261' },
+  { min: 262, max: 390, unit: 351_509, label: '262–390' },
+  { min: 391, max: 519, unit: 340_966, label: '391–519' },
+  { min: 520, max: 691, unit: 330_739, label: '520–691' },
+  { min: 692, max: 820, unit: 320_816, label: '692–820' },
+  { min: 821, max: 992, unit: 311_192, label: '821–992' },
+  { min: 993, max: 1164, unit: 301_854, label: '993–1164' },
+  { min: 1165, max: 1336, unit: 292_800, label: '1165–1336' },
+  { min: 1337, max: null, unit: 284_017, label: '1337+' },
 ]
 
 function swissBracketUnit(airport: 'AEP' | 'EZE', monthlyFlights: number): { unit: number; label: string } {
@@ -160,15 +160,19 @@ function swissBracketUnit(airport: 'AEP' | 'EZE', monthlyFlights: number): { uni
  */
 function buildFlySegUnitPriceByFlightCount(): number[] {
   const p = new Array<number>(61).fill(0)
-  p[1] = 2_229_207.85
-  p[2] = 1_981_507.29
-  p[3] = 1_486_128.6
-  for (let i = 4; i <= 7; i++) p[i] = 743_064.29
-  for (let i = 8; i <= 14; i++) p[i] = 618_956.01
-  for (let i = 15; i <= 21; i++) p[i] = 495_386.17
-  for (let i = 22; i <= 28; i++) p[i] = 441_160.78
-  for (let i = 29; i <= 40; i++) p[i] = 419_102.74
-  for (let i = 41; i <= 60; i++) p[i] = 398_214.23
+  p[1] = 2_563_589.03
+  p[2] = 2_278_733.38
+  p[3] = 1_709_047.89
+  for (let i = 4; i <= 7; i++) p[i] = 854_523.93
+  for (let i = 8; i <= 14; i++) p[i] = 711_799.41
+  for (let i = 15; i <= 21; i++) p[i] = 569_694.09
+  for (let i = 22; i <= 28; i++) p[i] = 507_334.89
+  p[29] = 481_968.15
+  for (let i = 30; i <= 39; i++) p[i] = 469_395.07
+  p[40] = 481_968.15
+  p[41] = 457_946.37
+  for (let i = 42; i <= 59; i++) p[i] = 445_999.94
+  p[60] = 457_946.37
   return p
 }
 
