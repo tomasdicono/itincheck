@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CasoItcTab } from './components/CasoItcTab'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
+import { TariffsTab } from './components/TariffsTab'
 import { DualMoneyTotal } from './components/DualMoneyTotal'
 import { useBcraValuacionUsd } from './hooks/useBcraValuacionUsd'
 import { downloadInformeExcel } from './lib/exportInformeExcel'
@@ -30,7 +31,7 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
-  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc'>('operativo')
+  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'tarifarios'>('operativo')
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -363,6 +364,17 @@ export default function App() {
                   >
                     CASO ITC
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setMainTab('tarifarios')}
+                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                      mainTab === 'tarifarios'
+                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                    }`}
+                  >
+                    Tarifarios
+                  </button>
                 </div>
 
                 {mainTab === 'operativo' && (
@@ -691,6 +703,12 @@ export default function App() {
                       tcQuoteDateIso={bcra.quote?.date ?? null}
                       tcQuoteProvider={bcra.quote?.provider ?? null}
                     />
+                  </section>
+                )}
+
+                {mainTab === 'tarifarios' && (
+                  <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+                    <TariffsTab />
                   </section>
                 )}
               </>

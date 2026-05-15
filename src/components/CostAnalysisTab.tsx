@@ -115,59 +115,63 @@ export function CostAnalysisTab({
         )}
       </div>
 
-      <div className="rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/60 p-4 text-sm text-[color:var(--color-muted)]">
-        <p className="font-semibold text-[color:var(--color-ink)]">Criterio de facturación</p>
-        <p className="mt-2">
-          Se consideran solo las escalas: <span className="font-mono font-bold text-[color:var(--color-ink)]">{COST_REPORT_AIRPORTS.join(', ')}</span>.
-        </p>
-        <p className="mt-2">
-          <strong>FlySeg</strong> (escalas del informe salvo AEP, EZE y <strong>CRD</strong>): el total del mes es la suma
-          por franjas de días <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y{' '}
-          <strong>22–31</strong>, con la tarifa unitaria según los vuelos de cada franja, más{' '}
-          <strong>sillas de ruedas</strong> ({FLYSEG_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
-          {FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}). Las columnas de promedio semanal y precio unitario
-          (ref.) son solo orientativas para el tramo de tarifas FlySeg.
-        </p>
-        <p className="mt-2">
-          <strong>Costos NFS (solo CRD):</strong> la tarifa por pasada depende del promedio de vuelos por semana del mes
-          (redondeado): 1 → $673.320; 2 → $488.700; 3 → $434.400; 4 → $407.250; 5–7 → $380.100; 8–14 → $325.800; 15 o más
-          → $271.500 ARS por vuelo. Se suman <strong>${NFS_CRD_MATERIALES_POR_VUELO_ARS.toLocaleString('es-AR')}</strong>{' '}
-          por vuelo en materiales y las mismas <strong>sillas de ruedas</strong> que FlySeg (
-          {FLYSEG_SILLAS_RUEDAS_POR_VUELO} × ${FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
-        </p>
-        <p className="mt-2">
-          <strong>Swissport</strong> (AEP y EZE): solo entran vuelos cuyo operador en <strong>columna J</strong> no sea{' '}
-          <span className="font-mono font-bold">JA</span> ni <span className="font-mono font-bold">JZ</span> (queda p. ej.{' '}
-          <span className="font-mono font-bold">WJ</span> y otros códigos distintos de esos dos). Se factura por{' '}
-          <strong>cantidad de vuelos del mes</strong> según brackets de pasada; cada vuelo en <strong>321</strong>{' '}
-          (columna L) suma <strong>+20%</strong> sobre el valor de la pasada. <strong>Simultaneidades</strong> (mismo día,
-          STD/ETD columna D a ≤59 min de distancia): <strong>+10%</strong> sobre la pasada de cada vuelo afectado si en el
-          grupo hay 2 o 3 vuelos; <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en
-          materiales y <strong>sillas de ruedas</strong> ({SWISSPORT_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
-          {SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
-        </p>
-        <p className="mt-2">
-          <strong>Rampa</strong> (todas las escalas del informe): montos en USD según columna L (320/321); si en la
-          columna I aparece algún destino{' '}
-          <span className="font-mono font-bold text-[color:var(--color-ink)]">
-            {RAMPA_INTER_DESTINOS.join(', ')}
-          </span>{' '}
-          el vuelo se trata como internacional. En <strong>doméstico</strong> (excepto REL/RES) se suman{' '}
-          <strong>{RAMPA_ADICIONALES_USD} USD</strong> de adicionales por vuelo a la tarifa 320/321; en{' '}
-          <strong>internacional</strong> las tarifas listadas ({RAMPA_INTER_320_USD} / {RAMPA_INTER_321_USD} USD) ya
-          incluyen todo (no se suman adicionales). <strong>REL y RES:</strong> {RAMPA_REL_RES_USD} USD por vuelo (sin
-          adicional). En vuelos <strong>domésticos</strong> (no internacional por col. I), si el ETD (columna D) está
-          entre <strong>00:00 y 05:59</strong> y la escala no es REL ni RES, la tarifa de ese vuelo (tarifa + adicionales)
-          lleva un{' '}
-          <strong>−{(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%</strong>; en <strong>internacionales</strong>{' '}
-          no aplica ese descuento. El equivalente en ARS usa la misma cotización USD del encabezado.
-        </p>
-        <p className="mt-2">
-          <strong>CASO ITC</strong> (pestaña dedicada): mismas reglas de Rampa en esas tablas, pero sin contar vuelos con
-          operador <span className="font-mono font-bold">JA</span> en columna J (<span className="font-mono font-bold">JZ</span>{' '}
-          sí se incluye).
-        </p>
-      </div>
+      <details className="group rounded-2xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/60 p-4 text-sm text-[color:var(--color-muted)]">
+        <summary className="cursor-pointer select-none font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-brand-teal)] transition-colors">
+          Criterios de facturación
+        </summary>
+        <div className="mt-4 flex flex-col gap-2">
+          <p>
+            Se consideran solo las escalas: <span className="font-mono font-bold text-[color:var(--color-ink)]">{COST_REPORT_AIRPORTS.join(', ')}</span>.
+          </p>
+          <p>
+            <strong>FlySeg</strong> (escalas del informe salvo AEP, EZE y <strong>CRD</strong>): el total del mes es la suma
+            por franjas de días <strong>1–7</strong>, <strong>8–14</strong>, <strong>15–21</strong> y{' '}
+            <strong>22–31</strong>, con la tarifa unitaria según los vuelos de cada franja, más{' '}
+            <strong>sillas de ruedas</strong> ({FLYSEG_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
+            {FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}). Las columnas de promedio semanal y precio unitario
+            (ref.) son solo orientativas para el tramo de tarifas FlySeg.
+          </p>
+          <p>
+            <strong>Costos NFS (solo CRD):</strong> la tarifa por pasada depende del promedio de vuelos por semana del mes
+            (redondeado): 1 → $673.320; 2 → $488.700; 3 → $434.400; 4 → $407.250; 5–7 → $380.100; 8–14 → $325.800; 15 o más
+            → $271.500 ARS por vuelo. Se suman <strong>${NFS_CRD_MATERIALES_POR_VUELO_ARS.toLocaleString('es-AR')}</strong>{' '}
+            por vuelo en materiales y las mismas <strong>sillas de ruedas</strong> que FlySeg (
+            {FLYSEG_SILLAS_RUEDAS_POR_VUELO} × ${FLYSEG_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
+          </p>
+          <p>
+            <strong>Swissport</strong> (AEP y EZE): solo entran vuelos cuyo operador en <strong>columna J</strong> no sea{' '}
+            <span className="font-mono font-bold">JA</span> ni <span className="font-mono font-bold">JZ</span> (queda p. ej.{' '}
+            <span className="font-mono font-bold">WJ</span> y otros códigos distintos de esos dos). Se factura por{' '}
+            <strong>cantidad de vuelos del mes</strong> según brackets de pasada; cada vuelo en <strong>321</strong>{' '}
+            (columna L) suma <strong>+20%</strong> sobre el valor de la pasada. <strong>Simultaneidades</strong> (mismo día,
+            STD/ETD columna D a ≤59 min de distancia): <strong>+10%</strong> sobre la pasada de cada vuelo afectado si en el
+            grupo hay 2 o 3 vuelos; <strong>+30%</strong> si hay 4 o más. Se suman <strong>$39.336</strong> por vuelo en
+            materiales y <strong>sillas de ruedas</strong> ({SWISSPORT_SILLAS_RUEDAS_POR_VUELO} por vuelo × $
+            {SWISSPORT_SILLA_RUEDAS_UNITARIO_ARS.toLocaleString('es-AR')}).
+          </p>
+          <p>
+            <strong>Rampa</strong> (todas las escalas del informe): montos en USD según columna L (320/321); si en la
+            columna I aparece algún destino{' '}
+            <span className="font-mono font-bold text-[color:var(--color-ink)]">
+              {RAMPA_INTER_DESTINOS.join(', ')}
+            </span>{' '}
+            el vuelo se trata como internacional. En <strong>doméstico</strong> (excepto REL/RES) se suman{' '}
+            <strong>{RAMPA_ADICIONALES_USD} USD</strong> de adicionales por vuelo a la tarifa 320/321; en{' '}
+            <strong>internacional</strong> las tarifas listadas ({RAMPA_INTER_320_USD} / {RAMPA_INTER_321_USD} USD) ya
+            incluyen todo (no se suman adicionales). <strong>REL y RES:</strong> {RAMPA_REL_RES_USD} USD por vuelo (sin
+            adicional). En vuelos <strong>domésticos</strong> (no internacional por col. I), si el ETD (columna D) está
+            entre <strong>00:00 y 05:59</strong> y la escala no es REL ni RES, la tarifa de ese vuelo (tarifa + adicionales)
+            lleva un{' '}
+            <strong>−{(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}%</strong>; en <strong>internacionales</strong>{' '}
+            no aplica ese descuento. El equivalente en ARS usa la misma cotización USD del encabezado.
+          </p>
+          <p>
+            <strong>CASO ITC</strong> (pestaña dedicada): mismas reglas de Rampa en esas tablas, pero sin contar vuelos con
+            operador <span className="font-mono font-bold">JA</span> en columna J (<span className="font-mono font-bold">JZ</span>{' '}
+            sí se incluye).
+          </p>
+        </div>
+      </details>
 
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Costos FlySeg</h3>

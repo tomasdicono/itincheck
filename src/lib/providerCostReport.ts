@@ -112,7 +112,7 @@ export const SWISSPORT_AIRPORTS = new Set(['AEP', 'EZE'])
 type SwissBracket = { min: number; max: number | null; unit: number; label: string }
 
 /** Precio por pasada según vuelos del mes (brackets Swissport AEP). */
-const AEP_SWISS_BRACKETS: SwissBracket[] = [
+export const AEP_SWISS_BRACKETS: SwissBracket[] = [
   { min: 133, max: 196, unit: 489_841.5, label: '133–196' },
   { min: 197, max: 261, unit: 468_195, label: '197–261' },
   { min: 262, max: 390, unit: 447_503.5, label: '262–390' },
@@ -125,7 +125,7 @@ const AEP_SWISS_BRACKETS: SwissBracket[] = [
   { min: 1337, max: null, unit: 382_972.5, label: '1337+' },
 ]
 
-const EZE_SWISS_BRACKETS: SwissBracket[] = [
+export const EZE_SWISS_BRACKETS: SwissBracket[] = [
   { min: 133, max: 196, unit: 423_204, label: '133–196' },
   { min: 197, max: 261, unit: 385_664, label: '197–261' },
   { min: 262, max: 390, unit: 351_509, label: '262–390' },
@@ -176,7 +176,7 @@ function buildFlySegUnitPriceByFlightCount(): number[] {
   return p
 }
 
-const FLYSEG_UNIT = buildFlySegUnitPriceByFlightCount()
+export const FLYSEG_UNIT = buildFlySegUnitPriceByFlightCount()
 
 function flySegUnitForCount(n: number): number {
   if (n <= 0) return 0
@@ -376,7 +376,7 @@ function rollupToMonthLines(
  * Tarifa ARS por pasada (CRD / NFS) según vuelos por semana (valor entero, típicamente el promedio mensual redondeado).
  * Tramo ≥15: tarifa mínima (equivalente a «más de 14 por semana» en la grilla comercial).
  */
-function nfsCrdPasadaArsForWeeklyRounded(weeklyRounded: number): { unit: number; label: string } {
+export function nfsCrdPasadaArsForWeeklyRounded(weeklyRounded: number): { unit: number; label: string } {
   if (weeklyRounded <= 0) return { unit: 0, label: '—' }
   if (weeklyRounded === 1) return { unit: 673_320, label: '1 / semana' }
   if (weeklyRounded === 2) return { unit: 488_700, label: '2 / semana' }
