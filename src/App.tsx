@@ -31,7 +31,7 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
-  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'tarifarios'>('operativo')
+  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'tarifarios'>('tarifarios')
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -177,6 +177,63 @@ export default function App() {
             {error}
           </div>
         ) : null}
+
+        <div className="js-card flex flex-wrap gap-2 rounded-3xl border border-[color:var(--color-line)] bg-white p-2">
+          {rawMatrix.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setMainTab('operativo')}
+                className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                  mainTab === 'operativo'
+                    ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                    : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                }`}
+              >
+                Análisis operativo
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainTab('costos')}
+                className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                  mainTab === 'costos'
+                    ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                    : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                }`}
+              >
+                Análisis costos
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainTab('casoitc')}
+                className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                  mainTab === 'casoitc'
+                    ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                    : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                }`}
+              >
+                CASO ITC
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setMainTab('tarifarios')}
+            className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+              mainTab === 'tarifarios'
+                ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+            }`}
+          >
+            Tarifarios
+          </button>
+        </div>
+
+        {mainTab === 'tarifarios' && (
+          <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+            <TariffsTab />
+          </section>
+        )}
 
         {headers.length > 0 ? (
           <>
@@ -330,52 +387,6 @@ export default function App() {
 
             {rawMatrix.length > 0 ? (
               <>
-                <div className="js-card flex flex-wrap gap-2 rounded-3xl border border-[color:var(--color-line)] bg-white p-2">
-                  <button
-                    type="button"
-                    onClick={() => setMainTab('operativo')}
-                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
-                      mainTab === 'operativo'
-                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
-                    }`}
-                  >
-                    Análisis operativo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMainTab('costos')}
-                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
-                      mainTab === 'costos'
-                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
-                    }`}
-                  >
-                    Análisis costos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMainTab('casoitc')}
-                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
-                      mainTab === 'casoitc'
-                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
-                    }`}
-                  >
-                    CASO ITC
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMainTab('tarifarios')}
-                    className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
-                      mainTab === 'tarifarios'
-                        ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
-                    }`}
-                  >
-                    Tarifarios
-                  </button>
-                </div>
 
                 {mainTab === 'operativo' && (
                   <>
@@ -706,11 +717,6 @@ export default function App() {
                   </section>
                 )}
 
-                {mainTab === 'tarifarios' && (
-                  <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
-                    <TariffsTab />
-                  </section>
-                )}
               </>
             ) : null}
           </>
