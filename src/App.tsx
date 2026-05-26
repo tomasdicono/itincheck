@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CasoItcTab } from './components/CasoItcTab'
+import { ComparativaFbItcTab } from './components/ComparativaFbItcTab'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
 import { TariffsTab } from './components/TariffsTab'
 import { DualMoneyTotal } from './components/DualMoneyTotal'
@@ -31,7 +32,9 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
-  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'tarifarios'>('tarifarios')
+  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'comparativafbitc' | 'tarifarios'>(
+    'tarifarios',
+  )
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -213,6 +216,17 @@ export default function App() {
                 }`}
               >
                 CASO ITC
+              </button>
+              <button
+                type="button"
+                onClick={() => setMainTab('comparativafbitc')}
+                className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+                  mainTab === 'comparativafbitc'
+                    ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                    : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+                }`}
+              >
+                Comparativa FB / ITC
               </button>
             </>
           )}
@@ -707,6 +721,19 @@ export default function App() {
                 {mainTab === 'casoitc' && (
                   <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
                     <CasoItcTab
+                      report={providerCostReport}
+                      arsPerUsd={bcra.arsPerUsd}
+                      tcLoading={bcra.loading}
+                      tcError={bcra.error}
+                      tcQuoteDateIso={bcra.quote?.date ?? null}
+                      tcQuoteProvider={bcra.quote?.provider ?? null}
+                    />
+                  </section>
+                )}
+
+                {mainTab === 'comparativafbitc' && (
+                  <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+                    <ComparativaFbItcTab
                       report={providerCostReport}
                       arsPerUsd={bcra.arsPerUsd}
                       tcLoading={bcra.loading}

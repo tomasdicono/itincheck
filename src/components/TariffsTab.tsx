@@ -14,6 +14,14 @@ import {
   RAMPA_REL_RES_USD,
   ITC_VIEJA_DOM_320_USD,
   ITC_VIEJA_DOM_321_USD,
+  FB_ADICIONALES_USD,
+  FB_MICROS_PROMEDIO_USD,
+  FB_TARIFA_UNICA_USD,
+  FB_USD_POR_VUELO,
+  ITC_MICROS_AEP_DOM_USD,
+  ITC_MICROS_AEP_INTER_USD,
+  ITC_MICROS_EZE_DOM_USD,
+  ITC_MICROS_EZE_INTER_USD,
   nfsCrdPasadaArsForWeeklyRounded,
 } from '../lib/providerCostReport'
 
@@ -178,6 +186,63 @@ export function TariffsTab() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-2xl border border-[color:var(--color-line)] bg-white p-4">
+        <h3 className="mb-3 text-lg font-black text-[color:var(--color-ink)]">Comparativa FB / ITC (micros)</h3>
+        <p className="mb-2 text-sm text-[color:var(--color-muted)]">Tarifas en dólares (USD) por vuelo en AEP/EZE.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
+            <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">
+              FB
+            </p>
+            <table className="min-w-full text-left text-sm">
+              <tbody>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">Tarifa única</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_UNICA_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">Adicionales</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_ADICIONALES_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">Micros (promedio)</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_MICROS_PROMEDIO_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] bg-[color:var(--color-table-head)] font-bold">
+                  <td className="px-3 py-2">Total por vuelo</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_USD_POR_VUELO)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
+            <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">
+              ITC micros
+            </p>
+            <table className="min-w-full text-left text-sm">
+              <tbody>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">EZE doméstico</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_EZE_DOM_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">EZE internacional</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_EZE_INTER_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">AEP doméstico</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_AEP_DOM_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">AEP internacional</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_AEP_INTER_USD)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-[color:var(--color-line)] bg-white p-4">
         <h3 className="mb-3 text-lg font-black text-[color:var(--color-ink)]">Rampa</h3>

@@ -49,6 +49,17 @@ export const RAMPA_REL_RES_USD = 550
 export const ITC_VIEJA_DOM_320_USD = 70
 export const ITC_VIEJA_DOM_321_USD = 80
 
+/** Comparativa FB / ITC micros (USD por vuelo en AEP/EZE). */
+export const FB_TARIFA_UNICA_USD = 494
+export const FB_ADICIONALES_USD = 50
+export const FB_MICROS_PROMEDIO_USD = 150
+export const FB_USD_POR_VUELO = FB_TARIFA_UNICA_USD + FB_ADICIONALES_USD + FB_MICROS_PROMEDIO_USD
+
+export const ITC_MICROS_EZE_INTER_USD = 270
+export const ITC_MICROS_EZE_DOM_USD = 12
+export const ITC_MICROS_AEP_INTER_USD = 228
+export const ITC_MICROS_AEP_DOM_USD = 10
+
 /** Descuento sobre la tarifa Rampa (incl. adicionales) si ETD 00:00–05:59 en vuelos DOM; no REL/RES ni inter. */
 export const RAMPA_DESCUENTO_MADRUGADA = 0.375
 
@@ -266,6 +277,18 @@ export type RampaMonthLine = {
   vuelosConDescuentoMadrugada: number
 }
 
+/** AEP/EZE: comparativa FB (tarifa única + adic. + micros) vs ITC micros por vuelo. */
+export type FbItcMicrosMonthLine = {
+  escala: string
+  mesIso: string
+  mesEtiqueta: string
+  vuelosDom: number
+  vuelosInter: number
+  vuelosTotalMes: number
+  fbTotalUsd: number
+  itcTotalUsd: number
+}
+
 export type ProviderCostReport = {
   flySeg: ProviderCostLine[]
   /** Suma de costos por franjas (tarifas) de todas las líneas FlySeg. */
@@ -295,6 +318,9 @@ export type ProviderCostReport = {
   /** Rampa sin REL/RES: dom 70/80 + adic.; inter listado (sin +31 adic.); sin desc. madrugada. */
   itcRampaViejaLines: RampaMonthLine[]
   itcRampaViejaTotalUsd: number
+  fbItcMicrosLines: FbItcMicrosMonthLine[]
+  fbItcMicrosFbTotalUsd: number
+  fbItcMicrosItcTotalUsd: number
 }
 
 type PeriodAggKey = string
@@ -584,6 +610,70 @@ type RampaBucketAgg = {
   vuelosConDescuentoMadrugada: number
 }
 
+function itcMicrosUsdPorVuelo(escala: string, inter: boolean): number {
+  if (escala === 'EZE') return inter ? ITC_MICROS_EZE_INTER_USD : ITC_MICROS_EZE_DOM_USD
+  if (escala === 'AEP') return inter ? ITC_MICROS_AEP_INTER_USD : ITC_MICROS_AEP_DOM_USD
+  return 0
+}
+
+type FbItcBucketKey = string
+
+type FbItcBucketAgg = {
+  escala: string
+  mesIso: string
+  mesEtiqueta: string
+  vuelosDom: number
+  vuelosInter: number
+  fbTotalUsd: number
+  itcTotalUsd: number
+}
+
+function fbItcComparativaBumpBucket(
+  map: Map<FbItcBucketKey, FbItcBucketAgg>,
+  escala: string,
+  mesIso: string,
+  mesEtiqueta: string,
+  row: unknown[],
+): void {
+  if (!SWISSPORT_AIRPORTS.has(escala) || operadorExcluyeItc(row)) return
+
+  const key: FbItcBucketKey = `${escala}|${mesIso}`
+  let b = map.get(key)
+  if (!b) {
+    b = { escala, mesIso, mesEtiqueta, vuelosDom: 0, vuelosInter: 0, fbTotalUsd: 0, itcTotalUsd: 0 }
+    map.set(key, b)
+  }
+
+  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
+  if (inter) b.vuelosInter += 1
+  else b.vuelosDom += 1
+  b.fbTotalUsd += FB_USD_POR_VUELO
+  b.itcTotalUsd += itcMicrosUsdPorVuelo(escala, inter)
+}
+
+function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAgg>): FbItcMicrosMonthLine[] {
+  const lines: FbItcMicrosMonthLine[] = []
+  for (const b of map.values()) {
+    const vuelosTotalMes = b.vuelosDom + b.vuelosInter
+    if (vuelosTotalMes === 0) continue
+    lines.push({
+      escala: b.escala,
+      mesIso: b.mesIso,
+      mesEtiqueta: b.mesEtiqueta,
+      vuelosDom: b.vuelosDom,
+      vuelosInter: b.vuelosInter,
+      vuelosTotalMes,
+      fbTotalUsd: Math.round(b.fbTotalUsd * 100) / 100,
+      itcTotalUsd: Math.round(b.itcTotalUsd * 100) / 100,
+    })
+  }
+  lines.sort((a, b) => {
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.mesIso.localeCompare(b.mesIso)
+  })
+  return lines
+}
+
 function rampaInternacionalDesdeColumnaI(destino: unknown): boolean {
   const codes = String(destino ?? '')
     .toUpperCase()
@@ -772,6 +862,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   const rampaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
   const itcRampaActualBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
   const itcRampaViejaBuckets = new Map<RampaBucketKey, RampaBucketAgg>()
+  const fbItcMicrosBuckets = new Map<FbItcBucketKey, FbItcBucketAgg>()
 
   const startRow = getProgrammingMatrixDataStartRow(rawMatrix)
   for (let r = startRow; r < rawMatrix.length; r++) {
@@ -790,6 +881,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     if (!operadorExcluyeItc(row)) {
       rampaBumpBucketWithConfig(itcRampaActualBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_ACTUAL)
       rampaBumpBucketWithConfig(itcRampaViejaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_VIEJA)
+      fbItcComparativaBumpBucket(fbItcMicrosBuckets, escala, mesIso, mesEtiqueta, row)
     }
 
     if (SWISSPORT_AIRPORTS.has(escala)) {
@@ -879,6 +971,10 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
   const itcRampaViejaLines = buildRampaLinesFromBuckets(itcRampaViejaBuckets)
   const itcRampaViejaTotalUsd = Math.round(itcRampaViejaLines.reduce((s, l) => s + l.totalUsd, 0) * 100) / 100
 
+  const fbItcMicrosLines = buildFbItcMicrosLinesFromBuckets(fbItcMicrosBuckets)
+  const fbItcMicrosFbTotalUsd = Math.round(fbItcMicrosLines.reduce((s, l) => s + l.fbTotalUsd, 0) * 100) / 100
+  const fbItcMicrosItcTotalUsd = Math.round(fbItcMicrosLines.reduce((s, l) => s + l.itcTotalUsd, 0) * 100) / 100
+
   return {
     flySeg,
     flySegTotalPasadasArs,
@@ -901,5 +997,8 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     itcRampaActualizadaTotalUsd,
     itcRampaViejaLines,
     itcRampaViejaTotalUsd,
+    fbItcMicrosLines,
+    fbItcMicrosFbTotalUsd,
+    fbItcMicrosItcTotalUsd,
   }
 }
