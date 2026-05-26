@@ -53,16 +53,14 @@ export function ComparativaFbItcTab({
   tcQuoteProvider: UsdArsQuoteProvider | null
 }) {
   const fbTotal = report.fbItcMicrosFbTotalUsd
-  const itcPasadaTotal = report.fbItcMicrosItcPasadaTotalUsd
-  const itcMicrosTotal = report.fbItcMicrosItcMicrosTotalUsd
   const itcTotal = report.fbItcMicrosItcTotalUsd
   const diffUsd = Math.round((fbTotal - itcTotal) * 100) / 100
   const diffArs = usdToArs(diffUsd, arsPerUsd)
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
   const tariffDesc =
-    `FB por vuelo (AEP/EZE): tarifa básica ${FB_TARIFA_UNICA_USD} + adicionales ${FB_ADICIONALES_USD} + micros ${FB_MICROS_PROMEDIO_USD} = ${FB_USD_POR_VUELO} USD. ` +
-    `ITC por vuelo: pasada (Rampa actualizada: dom. 320 ${RAMPA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} adic., dom. 321 ${RAMPA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD}, inter. ${RAMPA_INTER_320_USD}/${RAMPA_INTER_321_USD} sin adic.; desc. madrugada dom.) + micros (EZE dom. ${ITC_MICROS_EZE_DOM_USD} · inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · inter. ${ITC_MICROS_AEP_INTER_USD}). ` +
+    `Cada costo = pasada + adicional + micros por vuelo. FB: ${FB_TARIFA_UNICA_USD} + ${FB_ADICIONALES_USD} + ${FB_MICROS_PROMEDIO_USD} = ${FB_USD_POR_VUELO} USD fijo. ` +
+    `ITC pasada según Rampa (dom. 320 ${RAMPA_DOM_320_USD} / 321 ${RAMPA_DOM_321_USD}, inter. ${RAMPA_INTER_320_USD}/${RAMPA_INTER_321_USD}) + adicional dom. ${RAMPA_ADICIONALES_USD} + micros (EZE dom. ${ITC_MICROS_EZE_DOM_USD} · inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · inter. ${ITC_MICROS_AEP_INTER_USD}). ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
@@ -103,16 +101,14 @@ export function ComparativaFbItcTab({
               <th className="px-3 py-2.5 text-right font-bold">Dom.</th>
               <th className="px-3 py-2.5 text-right font-bold">Inter.</th>
               <th className="px-3 py-2.5 text-right font-bold">Vuelos</th>
-              <th className="px-3 py-2.5 text-right font-bold">Total FB</th>
-              <th className="px-3 py-2.5 text-right font-bold">Pasada ITC</th>
-              <th className="px-3 py-2.5 text-right font-bold">Micros ITC</th>
-              <th className="px-3 py-2.5 text-right font-bold">Total ITC</th>
+              <th className="px-3 py-2.5 text-right font-bold">Costo FB</th>
+              <th className="px-3 py-2.5 text-right font-bold">Costo ITC</th>
             </tr>
           </thead>
           <tbody>
             {report.fbItcMicrosLines.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                <td colSpan={7} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
                   No hay vuelos en AEP/EZE con los datos y filtros actuales.
                 </td>
               </tr>
@@ -130,16 +126,10 @@ export function ComparativaFbItcTab({
                     {line.vuelosTotalMes.toLocaleString('es-AR')}
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    <MoneyCell usd={line.fbTotalUsd} arsPerUsd={arsPerUsd} />
+                    <MoneyCell usd={line.costoFbUsd} arsPerUsd={arsPerUsd} />
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    <MoneyCell usd={line.itcPasadaUsd} arsPerUsd={arsPerUsd} />
-                  </td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    <MoneyCell usd={line.itcMicrosUsd} arsPerUsd={arsPerUsd} />
-                  </td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    <MoneyCell usd={line.itcTotalUsd} arsPerUsd={arsPerUsd} />
+                    <MoneyCell usd={line.costoItcUsd} arsPerUsd={arsPerUsd} />
                   </td>
                 </tr>
               ))
@@ -156,20 +146,6 @@ export function ComparativaFbItcTab({
                     <DualMoneyTotal value={usdToArs(fbTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
                   ) : (
                     <span className="tabular-nums">{usdFmtPlain.format(fbTotal)}</span>
-                  )}
-                </td>
-                <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
-                  {usdToArs(itcPasadaTotal, arsPerUsd) != null ? (
-                    <DualMoneyTotal value={usdToArs(itcPasadaTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
-                  ) : (
-                    <span className="tabular-nums">{usdFmtPlain.format(itcPasadaTotal)}</span>
-                  )}
-                </td>
-                <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
-                  {usdToArs(itcMicrosTotal, arsPerUsd) != null ? (
-                    <DualMoneyTotal value={usdToArs(itcMicrosTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
-                  ) : (
-                    <span className="tabular-nums">{usdFmtPlain.format(itcMicrosTotal)}</span>
                   )}
                 </td>
                 <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
@@ -190,13 +166,13 @@ export function ComparativaFbItcTab({
           Comparación de totales
         </h3>
         <p className="mt-2 text-xs text-[color:var(--color-muted)]">
-          Diferencia = total FB − total ITC (pasada + micros; mismo universo de vuelos).
+          Diferencia = costo FB − costo ITC (pasada + adicional + micros; mismo universo de vuelos).
         </p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/50 p-3">
-            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Total FB</dt>
+            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Costo FB</dt>
             <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">
-              Básica + adic. + micros ({usdFmtPlain.format(FB_USD_POR_VUELO)}/vuelo)
+              Pasada + adicional + micros ({usdFmtPlain.format(FB_USD_POR_VUELO)}/vuelo)
             </dd>
             <dd className="mt-1 font-black tabular-nums">{usdFmtPlain.format(fbTotal)}</dd>
             <dd className="mt-1 text-xs font-semibold text-[color:var(--color-muted)]">
@@ -204,10 +180,8 @@ export function ComparativaFbItcTab({
             </dd>
           </div>
           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/50 p-3">
-            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Total ITC</dt>
-            <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">
-              Pasada {usdFmtPlain.format(itcPasadaTotal)} + micros {usdFmtPlain.format(itcMicrosTotal)}
-            </dd>
+            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Costo ITC</dt>
+            <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">Pasada + adicional + micros por vuelo</dd>
             <dd className="mt-1 font-black tabular-nums">{usdFmtPlain.format(itcTotal)}</dd>
             <dd className="mt-1 text-xs font-semibold text-[color:var(--color-muted)]">
               {usdToArs(itcTotal, arsPerUsd) != null ? formatArsWithUsd(usdToArs(itcTotal, arsPerUsd)!, arsPerUsd) : '—'}
