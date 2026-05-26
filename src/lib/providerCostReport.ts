@@ -277,7 +277,7 @@ export type RampaMonthLine = {
   vuelosConDescuentoMadrugada: number
 }
 
-/** AEP/EZE: comparativa FB (tarifa única + adic. + micros) vs ITC micros por vuelo. */
+/** AEP/EZE: comparativa FB (tarifa + adic. + micros) vs ITC (pasada Rampa + micros) por vuelo. */
 export type FbItcMicrosMonthLine = {
   escala: string
   mesIso: string
@@ -286,6 +286,8 @@ export type FbItcMicrosMonthLine = {
   vuelosInter: number
   vuelosTotalMes: number
   fbTotalUsd: number
+  itcPasadaUsd: number
+  itcMicrosUsd: number
   itcTotalUsd: number
 }
 
@@ -320,6 +322,8 @@ export type ProviderCostReport = {
   itcRampaViejaTotalUsd: number
   fbItcMicrosLines: FbItcMicrosMonthLine[]
   fbItcMicrosFbTotalUsd: number
+  fbItcMicrosItcPasadaTotalUsd: number
+  fbItcMicrosItcMicrosTotalUsd: number
   fbItcMicrosItcTotalUsd: number
 }
 
@@ -625,30 +629,9 @@ type FbItcBucketAgg = {
   vuelosDom: number
   vuelosInter: number
   fbTotalUsd: number
+  itcPasadaUsd: number
+  itcMicrosUsd: number
   itcTotalUsd: number
-}
-
-function fbItcComparativaBumpBucket(
-  map: Map<FbItcBucketKey, FbItcBucketAgg>,
-  escala: string,
-  mesIso: string,
-  mesEtiqueta: string,
-  row: unknown[],
-): void {
-  if (!SWISSPORT_AIRPORTS.has(escala) || operadorExcluyeItc(row)) return
-
-  const key: FbItcBucketKey = `${escala}|${mesIso}`
-  let b = map.get(key)
-  if (!b) {
-    b = { escala, mesIso, mesEtiqueta, vuelosDom: 0, vuelosInter: 0, fbTotalUsd: 0, itcTotalUsd: 0 }
-    map.set(key, b)
-  }
-
-  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
-  if (inter) b.vuelosInter += 1
-  else b.vuelosDom += 1
-  b.fbTotalUsd += FB_USD_POR_VUELO
-  b.itcTotalUsd += itcMicrosUsdPorVuelo(escala, inter)
 }
 
 function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAgg>): FbItcMicrosMonthLine[] {
@@ -664,6 +647,8 @@ function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAg
       vuelosInter: b.vuelosInter,
       vuelosTotalMes,
       fbTotalUsd: Math.round(b.fbTotalUsd * 100) / 100,
+      itcPasadaUsd: Math.round(b.itcPasadaUsd * 100) / 100,
+      itcMicrosUsd: Math.round(b.itcMicrosUsd * 100) / 100,
       itcTotalUsd: Math.round(b.itcTotalUsd * 100) / 100,
     })
   }
@@ -739,6 +724,66 @@ const RAMPA_CONFIG_ITC_VIEJA: RampaTariffConfig = {
   applyMadrugadaDomDiscount: false,
 }
 
+/** Pasada ITC (tarifa Rampa actualizada + adicionales dom.; desc. madrugada dom. si aplica). */
+function rampaUsdPorVueloConConfig(row: unknown[], cfg: RampaTariffConfig): number {
+  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
+  const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
+
+  const packDom = cfg.dom320Base + cfg.adicionalesDomUsd
+  const pack321Dom = cfg.dom321Base + cfg.adicionalesDomUsd
+  const packInter = cfg.inter320Base + cfg.adicionalesInterUsd
+  const pack321Inter = cfg.inter321Base + cfg.adicionalesInterUsd
+
+  let baseUsd = 0
+  if (eq === '321') baseUsd = inter ? pack321Inter : pack321Dom
+  else if (eq === '320') baseUsd = inter ? packInter : packDom
+  else baseUsd = inter ? packInter : packDom
+
+  const madrugada = rampaEtdEnVentanaMadrugada(row[COL_ETD])
+  const descMadrugadaDom = cfg.applyMadrugadaDomDiscount && madrugada && !inter
+  const factor = descMadrugadaDom ? 1 - RAMPA_DESCUENTO_MADRUGADA : 1
+  return Math.round(baseUsd * factor * 100) / 100
+}
+
+function fbItcComparativaBumpBucket(
+  map: Map<FbItcBucketKey, FbItcBucketAgg>,
+  escala: string,
+  mesIso: string,
+  mesEtiqueta: string,
+  row: unknown[],
+): void {
+  if (!SWISSPORT_AIRPORTS.has(escala) || operadorExcluyeItc(row)) return
+
+  const key: FbItcBucketKey = `${escala}|${mesIso}`
+  let b = map.get(key)
+  if (!b) {
+    b = {
+      escala,
+      mesIso,
+      mesEtiqueta,
+      vuelosDom: 0,
+      vuelosInter: 0,
+      fbTotalUsd: 0,
+      itcPasadaUsd: 0,
+      itcMicrosUsd: 0,
+      itcTotalUsd: 0,
+    }
+    map.set(key, b)
+  }
+
+  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
+  if (inter) b.vuelosInter += 1
+  else b.vuelosDom += 1
+
+  const pasadaUsd = rampaUsdPorVueloConConfig(row, RAMPA_CONFIG_ITC_ACTUAL)
+  const microsUsd = itcMicrosUsdPorVuelo(escala, inter)
+
+  b.fbTotalUsd += FB_USD_POR_VUELO
+  b.itcPasadaUsd += pasadaUsd
+  b.itcMicrosUsd += microsUsd
+  b.itcTotalUsd += pasadaUsd + microsUsd
+}
+
 function rampaBumpBucketWithConfig(
   map: Map<RampaBucketKey, RampaBucketAgg>,
   escala: string,
@@ -780,22 +825,13 @@ function rampaBumpBucketWithConfig(
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
 
-  const packDom = cfg.dom320Base + cfg.adicionalesDomUsd
-  const pack321Dom = cfg.dom321Base + cfg.adicionalesDomUsd
-  const packInter = cfg.inter320Base + cfg.adicionalesInterUsd
-  const pack321Inter = cfg.inter321Base + cfg.adicionalesInterUsd
-
-  let baseUsd = 0
   if (eq === '321') {
-    baseUsd = inter ? pack321Inter : pack321Dom
     if (inter) b.inter321 += 1
     else b.dom321 += 1
   } else if (eq === '320') {
-    baseUsd = inter ? packInter : packDom
     if (inter) b.inter320 += 1
     else b.dom320 += 1
   } else {
-    baseUsd = inter ? packInter : packDom
     if (inter) b.otroInter += 1
     else b.otroDom += 1
   }
@@ -805,8 +841,7 @@ function rampaBumpBucketWithConfig(
   if (descMadrugadaDom) {
     b.vuelosConDescuentoMadrugada += 1
   }
-  const factor = descMadrugadaDom ? 1 - RAMPA_DESCUENTO_MADRUGADA : 1
-  b.totalUsdAccum += Math.round(baseUsd * factor * 100) / 100
+  b.totalUsdAccum += rampaUsdPorVueloConConfig(row, cfg)
 }
 
 function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): RampaMonthLine[] {
@@ -973,6 +1008,10 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
 
   const fbItcMicrosLines = buildFbItcMicrosLinesFromBuckets(fbItcMicrosBuckets)
   const fbItcMicrosFbTotalUsd = Math.round(fbItcMicrosLines.reduce((s, l) => s + l.fbTotalUsd, 0) * 100) / 100
+  const fbItcMicrosItcPasadaTotalUsd =
+    Math.round(fbItcMicrosLines.reduce((s, l) => s + l.itcPasadaUsd, 0) * 100) / 100
+  const fbItcMicrosItcMicrosTotalUsd =
+    Math.round(fbItcMicrosLines.reduce((s, l) => s + l.itcMicrosUsd, 0) * 100) / 100
   const fbItcMicrosItcTotalUsd = Math.round(fbItcMicrosLines.reduce((s, l) => s + l.itcTotalUsd, 0) * 100) / 100
 
   return {
@@ -999,6 +1038,8 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     itcRampaViejaTotalUsd,
     fbItcMicrosLines,
     fbItcMicrosFbTotalUsd,
+    fbItcMicrosItcPasadaTotalUsd,
+    fbItcMicrosItcMicrosTotalUsd,
     fbItcMicrosItcTotalUsd,
   }
 }

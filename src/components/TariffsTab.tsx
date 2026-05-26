@@ -188,9 +188,9 @@ export function TariffsTab() {
       </div>
 
       <section className="rounded-2xl border border-[color:var(--color-line)] bg-white p-4">
-        <h3 className="mb-3 text-lg font-black text-[color:var(--color-ink)]">Comparativa FB / ITC (micros)</h3>
+        <h3 className="mb-3 text-lg font-black text-[color:var(--color-ink)]">Comparativa FB / ITC</h3>
         <p className="mb-2 text-sm text-[color:var(--color-muted)]">Tarifas en dólares (USD) por vuelo en AEP/EZE.</p>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
             <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">
               FB
@@ -215,6 +215,36 @@ export function TariffsTab() {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
+            <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">
+              ITC pasada (Rampa)
+            </p>
+            <table className="min-w-full text-left text-sm">
+              <tbody>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">Dom. 320 + adic.</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {moneyUsd(RAMPA_DOM_320_USD + RAMPA_ADICIONALES_USD)}
+                  </td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">Dom. 321 + adic.</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {moneyUsd(RAMPA_DOM_321_USD + RAMPA_ADICIONALES_USD)}
+                  </td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">Inter. 320 / 321</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {moneyUsd(RAMPA_INTER_320_USD)} / {moneyUsd(RAMPA_INTER_321_USD)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="border-t border-[color:var(--color-line)] px-3 py-2 text-xs text-[color:var(--color-muted)]">
+              Según equipamiento (col. L), destino y desc. madrugada dom.
+            </p>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
             <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">

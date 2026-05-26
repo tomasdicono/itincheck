@@ -11,6 +11,11 @@ import {
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
   ITC_MICROS_EZE_INTER_USD,
+  RAMPA_ADICIONALES_USD,
+  RAMPA_DOM_320_USD,
+  RAMPA_DOM_321_USD,
+  RAMPA_INTER_320_USD,
+  RAMPA_INTER_321_USD,
   RAMPA_INTER_DESTINOS,
 } from '../lib/providerCostReport'
 
@@ -24,6 +29,12 @@ const usdFmtPlain = new Intl.NumberFormat('es-AR', {
 function usdToArs(usd: number, arsPerUsd: number | null): number | null {
   if (arsPerUsd == null || arsPerUsd <= 0 || !Number.isFinite(arsPerUsd)) return null
   return Math.round(usd * arsPerUsd * 100) / 100
+}
+
+function MoneyCell({ usd, arsPerUsd }: { usd: number; arsPerUsd: number | null }) {
+  const ars = usdToArs(usd, arsPerUsd)
+  if (ars != null) return <span>{formatArsWithUsd(ars, arsPerUsd)}</span>
+  return <span className="text-[color:var(--color-muted)]">{usdFmtPlain.format(usd)}</span>
 }
 
 export function ComparativaFbItcTab({
@@ -42,15 +53,17 @@ export function ComparativaFbItcTab({
   tcQuoteProvider: UsdArsQuoteProvider | null
 }) {
   const fbTotal = report.fbItcMicrosFbTotalUsd
+  const itcPasadaTotal = report.fbItcMicrosItcPasadaTotalUsd
+  const itcMicrosTotal = report.fbItcMicrosItcMicrosTotalUsd
   const itcTotal = report.fbItcMicrosItcTotalUsd
   const diffUsd = Math.round((fbTotal - itcTotal) * 100) / 100
   const diffArs = usdToArs(diffUsd, arsPerUsd)
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
   const tariffDesc =
-    `FB (por vuelo en AEP/EZE): tarifa única ${FB_TARIFA_UNICA_USD} + adicionales ${FB_ADICIONALES_USD} + micros promedio ${FB_MICROS_PROMEDIO_USD} = ${FB_USD_POR_VUELO} USD. ` +
-    `ITC micros: EZE dom. ${ITC_MICROS_EZE_DOM_USD} · EZE inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · AEP inter. ${ITC_MICROS_AEP_INTER_USD} USD/vuelo. ` +
-    `Clasificación inter.: columna I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
+    `FB por vuelo (AEP/EZE): tarifa básica ${FB_TARIFA_UNICA_USD} + adicionales ${FB_ADICIONALES_USD} + micros ${FB_MICROS_PROMEDIO_USD} = ${FB_USD_POR_VUELO} USD. ` +
+    `ITC por vuelo: pasada (Rampa actualizada: dom. 320 ${RAMPA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} adic., dom. 321 ${RAMPA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD}, inter. ${RAMPA_INTER_320_USD}/${RAMPA_INTER_321_USD} sin adic.; desc. madrugada dom.) + micros (EZE dom. ${ITC_MICROS_EZE_DOM_USD} · inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · inter. ${ITC_MICROS_AEP_INTER_USD}). ` +
+    `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,49 +104,45 @@ export function ComparativaFbItcTab({
               <th className="px-3 py-2.5 text-right font-bold">Inter.</th>
               <th className="px-3 py-2.5 text-right font-bold">Vuelos</th>
               <th className="px-3 py-2.5 text-right font-bold">Total FB</th>
-              <th className="px-3 py-2.5 text-right font-bold">Total ITC micros</th>
+              <th className="px-3 py-2.5 text-right font-bold">Pasada ITC</th>
+              <th className="px-3 py-2.5 text-right font-bold">Micros ITC</th>
+              <th className="px-3 py-2.5 text-right font-bold">Total ITC</th>
             </tr>
           </thead>
           <tbody>
             {report.fbItcMicrosLines.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                <td colSpan={9} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
                   No hay vuelos en AEP/EZE con los datos y filtros actuales.
                 </td>
               </tr>
             ) : (
-              report.fbItcMicrosLines.map((line) => {
-                const fbArs = usdToArs(line.fbTotalUsd, arsPerUsd)
-                const itcArs = usdToArs(line.itcTotalUsd, arsPerUsd)
-                return (
-                  <tr
-                    key={`${line.escala}-${line.mesIso}`}
-                    className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
-                  >
-                    <td className="px-3 py-2 font-mono font-bold">{line.escala}</td>
-                    <td className="px-3 py-2 capitalize">{line.mesEtiqueta}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosDom.toLocaleString('es-AR')}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosInter.toLocaleString('es-AR')}</td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {line.vuelosTotalMes.toLocaleString('es-AR')}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {fbArs != null ? (
-                        formatArsWithUsd(fbArs, arsPerUsd)
-                      ) : (
-                        <span className="text-[color:var(--color-muted)]">{usdFmtPlain.format(line.fbTotalUsd)}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                      {itcArs != null ? (
-                        formatArsWithUsd(itcArs, arsPerUsd)
-                      ) : (
-                        <span className="text-[color:var(--color-muted)]">{usdFmtPlain.format(line.itcTotalUsd)}</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })
+              report.fbItcMicrosLines.map((line) => (
+                <tr
+                  key={`${line.escala}-${line.mesIso}`}
+                  className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
+                >
+                  <td className="px-3 py-2 font-mono font-bold">{line.escala}</td>
+                  <td className="px-3 py-2 capitalize">{line.mesEtiqueta}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{line.vuelosDom.toLocaleString('es-AR')}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{line.vuelosInter.toLocaleString('es-AR')}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    {line.vuelosTotalMes.toLocaleString('es-AR')}
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    <MoneyCell usd={line.fbTotalUsd} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    <MoneyCell usd={line.itcPasadaUsd} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    <MoneyCell usd={line.itcMicrosUsd} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    <MoneyCell usd={line.itcTotalUsd} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
           {report.fbItcMicrosLines.length > 0 ? (
@@ -147,6 +156,20 @@ export function ComparativaFbItcTab({
                     <DualMoneyTotal value={usdToArs(fbTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
                   ) : (
                     <span className="tabular-nums">{usdFmtPlain.format(fbTotal)}</span>
+                  )}
+                </td>
+                <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
+                  {usdToArs(itcPasadaTotal, arsPerUsd) != null ? (
+                    <DualMoneyTotal value={usdToArs(itcPasadaTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
+                  ) : (
+                    <span className="tabular-nums">{usdFmtPlain.format(itcPasadaTotal)}</span>
+                  )}
+                </td>
+                <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
+                  {usdToArs(itcMicrosTotal, arsPerUsd) != null ? (
+                    <DualMoneyTotal value={usdToArs(itcMicrosTotal, arsPerUsd)!} arsPerUsd={arsPerUsd} />
+                  ) : (
+                    <span className="tabular-nums">{usdFmtPlain.format(itcMicrosTotal)}</span>
                   )}
                 </td>
                 <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right align-top font-black">
@@ -166,17 +189,25 @@ export function ComparativaFbItcTab({
         <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--color-brand-celeste-muted)]">
           Comparación de totales
         </h3>
-        <p className="mt-2 text-xs text-[color:var(--color-muted)]">Diferencia = total FB − total ITC micros (mismo universo de vuelos).</p>
+        <p className="mt-2 text-xs text-[color:var(--color-muted)]">
+          Diferencia = total FB − total ITC (pasada + micros; mismo universo de vuelos).
+        </p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/50 p-3">
             <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Total FB</dt>
+            <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">
+              Básica + adic. + micros ({usdFmtPlain.format(FB_USD_POR_VUELO)}/vuelo)
+            </dd>
             <dd className="mt-1 font-black tabular-nums">{usdFmtPlain.format(fbTotal)}</dd>
             <dd className="mt-1 text-xs font-semibold text-[color:var(--color-muted)]">
               {usdToArs(fbTotal, arsPerUsd) != null ? formatArsWithUsd(usdToArs(fbTotal, arsPerUsd)!, arsPerUsd) : '—'}
             </dd>
           </div>
           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/50 p-3">
-            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Total ITC micros</dt>
+            <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Total ITC</dt>
+            <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">
+              Pasada {usdFmtPlain.format(itcPasadaTotal)} + micros {usdFmtPlain.format(itcMicrosTotal)}
+            </dd>
             <dd className="mt-1 font-black tabular-nums">{usdFmtPlain.format(itcTotal)}</dd>
             <dd className="mt-1 text-xs font-semibold text-[color:var(--color-muted)]">
               {usdToArs(itcTotal, arsPerUsd) != null ? formatArsWithUsd(usdToArs(itcTotal, arsPerUsd)!, arsPerUsd) : '—'}
