@@ -48,7 +48,7 @@ export const RAMPA_REL_RES_USD = 550
 /** ITC tarifa actualizada — pasada internacional y adicionales (USD). */
 export const ITC_INTER_320_USD = 1062
 export const ITC_INTER_321_USD = 1261
-export const ITC_ADICIONALES_DOM_USD = 30
+export const ITC_ADICIONALES_DOM_USD = 3
 export const ITC_ADICIONALES_INTER_USD = 58
 
 /** ITC “tarifa vieja”: doméstico 320/321 (inter usa pasada ITC actual). */
