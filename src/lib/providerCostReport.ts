@@ -50,10 +50,23 @@ export const ITC_VIEJA_DOM_320_USD = 70
 export const ITC_VIEJA_DOM_321_USD = 80
 
 /** Comparativa FB / ITC (USD por vuelo en AEP/EZE). */
+/** FB pasada base (menos de 200 vuelos/mes en la escala). */
 export const FB_TARIFA_320_USD = 449
 export const FB_TARIFA_321_USD = 473
+/** FB pasada si el mes en la escala tiene 200–399 vuelos. */
+export const FB_BRACKET_200_399_TARIFA_320_USD = 427
+export const FB_BRACKET_200_399_TARIFA_321_USD = 449
+/** FB pasada si el mes en la escala tiene ≥ 400 vuelos. */
+export const FB_BRACKET_400_PLUS_TARIFA_320_USD = 406
+export const FB_BRACKET_400_PLUS_TARIFA_321_USD = 427
+export const FB_BRACKET_MID_MIN = 200
+export const FB_BRACKET_HIGH_MIN = 400
+
 export const FB_ADICIONALES_USD = 30
 export const FB_MICROS_USD = 72
+
+/** ITC micros: fracción de vuelos con uso de micros en AEP (60 % con, 40 % sin). */
+export const ITC_MICROS_AEP_USO_FRACCION = 0.6
 
 export const ITC_MICROS_EZE_INTER_USD = 270
 export const ITC_MICROS_EZE_DOM_USD = 12
@@ -610,10 +623,33 @@ type RampaBucketAgg = {
   vuelosConDescuentoMadrugada: number
 }
 
-function itcMicrosUsdPorVuelo(escala: string, inter: boolean): number {
+function itcMicrosTarifaUsdPorVuelo(escala: string, inter: boolean): number {
   if (escala === 'EZE') return inter ? ITC_MICROS_EZE_INTER_USD : ITC_MICROS_EZE_DOM_USD
   if (escala === 'AEP') return inter ? ITC_MICROS_AEP_INTER_USD : ITC_MICROS_AEP_DOM_USD
   return 0
+}
+
+/** Micros ITC esperados: EZE dom. 100 % · EZE inter. 0 % · AEP 60 % de los vuelos con micros. */
+function itcMicrosUsdEsperadoPorVuelo(escala: string, inter: boolean): number {
+  const tarifa = itcMicrosTarifaUsdPorVuelo(escala, inter)
+  if (escala === 'EZE') return inter ? 0 : tarifa
+  if (escala === 'AEP') return Math.round(tarifa * ITC_MICROS_AEP_USO_FRACCION * 100) / 100
+  return tarifa
+}
+
+/** Pasada FB según equipamiento (col. L) y vuelos del mes en la escala (brackets). */
+export function fbPasadaUsdPorEquipamiento(
+  eq: '320' | '321' | 'otro',
+  vuelosMesEnEscala: number,
+): number {
+  const is321 = eq === '321'
+  if (vuelosMesEnEscala >= FB_BRACKET_HIGH_MIN) {
+    return is321 ? FB_BRACKET_400_PLUS_TARIFA_321_USD : FB_BRACKET_400_PLUS_TARIFA_320_USD
+  }
+  if (vuelosMesEnEscala >= FB_BRACKET_MID_MIN) {
+    return is321 ? FB_BRACKET_200_399_TARIFA_321_USD : FB_BRACKET_200_399_TARIFA_320_USD
+  }
+  return is321 ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
 }
 
 type FbItcBucketKey = string
@@ -745,22 +781,22 @@ function rampaUsdPorVueloConConfig(row: unknown[], cfg: RampaTariffConfig): numb
   return Math.round((pasadaUsd + adicionalUsd) * 100) / 100
 }
 
-/** FB comparativa: pasada (320/321, col. L) + adicional + micros por vuelo. */
-function fbComparativaUsdPorVuelo(row: unknown[]): number {
+/** FB comparativa: pasada (bracket por vuelos/mes en escala) + adicional + micros. */
+function fbComparativaUsdPorVuelo(row: unknown[], vuelosMesEnEscala: number): number {
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
-  const pasadaBase = eq === '321' ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
+  const pasadaBase = fbPasadaUsdPorEquipamiento(eq, vuelosMesEnEscala)
   return Math.round((pasadaBase + FB_ADICIONALES_USD + FB_MICROS_USD) * 100) / 100
 }
 
-/** ITC comparativa: pasada Rampa + adicional dom. + micros por escala/dom-inter. */
+/** ITC comparativa: pasada Rampa + adicional dom. + micros (uso esperado por escala). */
 function itcComparativaUsdPorVuelo(row: unknown[], escala: string): number {
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const { pasadaUsd, adicionalUsd } = rampaPasadaYAdicionalUsdPorVuelo(row, RAMPA_CONFIG_ITC_ACTUAL)
-  const microsUsd = itcMicrosUsdPorVuelo(escala, inter)
+  const microsUsd = itcMicrosUsdEsperadoPorVuelo(escala, inter)
   return Math.round((pasadaUsd + adicionalUsd + microsUsd) * 100) / 100
 }
 
-function fbItcComparativaBumpBucket(
+function fbItcComparativaCountBump(
   map: Map<FbItcBucketKey, FbItcBucketAgg>,
   escala: string,
   mesIso: string,
@@ -787,8 +823,11 @@ function fbItcComparativaBumpBucket(
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   if (inter) b.vuelosInter += 1
   else b.vuelosDom += 1
+}
 
-  b.costoFbUsd += fbComparativaUsdPorVuelo(row)
+function fbItcComparativaPriceBump(b: FbItcBucketAgg, escala: string, row: unknown[]): void {
+  const vuelosMes = b.vuelosDom + b.vuelosInter
+  b.costoFbUsd += fbComparativaUsdPorVuelo(row, vuelosMes)
   b.costoItcUsd += itcComparativaUsdPorVuelo(row, escala)
 }
 
@@ -896,6 +935,8 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * Rampa (tabla principal): USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
  * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
  * Caso ITC (líneas ITC): además no se cuentan vuelos con operador JA en col. J (JZ sí).
+ * Comparativa FB/ITC (AEP/EZE): FB pasada por bracket de vuelos del mes en la escala (200–399 / ≥400);
+ * ITC micros con uso esperado (AEP 60 %, EZE dom. 100 %, EZE inter. 0 %).
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()
@@ -924,7 +965,7 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     if (!operadorExcluyeItc(row)) {
       rampaBumpBucketWithConfig(itcRampaActualBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_ACTUAL)
       rampaBumpBucketWithConfig(itcRampaViejaBuckets, escala, mesIso, mesEtiqueta, row, RAMPA_CONFIG_ITC_VIEJA)
-      fbItcComparativaBumpBucket(fbItcMicrosBuckets, escala, mesIso, mesEtiqueta, row)
+      fbItcComparativaCountBump(fbItcMicrosBuckets, escala, mesIso, mesEtiqueta, row)
     }
 
     if (SWISSPORT_AIRPORTS.has(escala)) {
@@ -963,6 +1004,19 @@ export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostRep
     const prev = flySegPeriodMap.get(key)
     if (prev) prev.n += 1
     else flySegPeriodMap.set(key, { escala, mesIso, mesEtiqueta, periodo, n: 1 })
+  }
+
+  for (let r = startRow; r < rawMatrix.length; r++) {
+    const row = rawMatrix[r]
+    if (!row?.length) continue
+    const opDate = parseProgrammingOperationDate(row[COL_FECHA])
+    if (!opDate) continue
+    const escala = normalizeProgrammingEscala(row[COL_ESCALA])
+    if (escala === '—' || !ALLOWED.has(escala) || operadorExcluyeItc(row)) continue
+    if (!SWISSPORT_AIRPORTS.has(escala)) continue
+    const { mesIso } = monthKeyAndLabel(opDate)
+    const b = fbItcMicrosBuckets.get(`${escala}|${mesIso}`)
+    if (b) fbItcComparativaPriceBump(b, escala, row)
   }
 
   const flySeg = rollupToMonthLines(flySegPeriodMap, true)

@@ -15,10 +15,17 @@ import {
   ITC_VIEJA_DOM_320_USD,
   ITC_VIEJA_DOM_321_USD,
   FB_ADICIONALES_USD,
+  FB_BRACKET_200_399_TARIFA_320_USD,
+  FB_BRACKET_200_399_TARIFA_321_USD,
+  FB_BRACKET_400_PLUS_TARIFA_320_USD,
+  FB_BRACKET_400_PLUS_TARIFA_321_USD,
+  FB_BRACKET_HIGH_MIN,
+  FB_BRACKET_MID_MIN,
   FB_MICROS_USD,
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
   ITC_MICROS_AEP_DOM_USD,
+  ITC_MICROS_AEP_USO_FRACCION,
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
   ITC_MICROS_EZE_INTER_USD,
@@ -200,12 +207,31 @@ export function TariffsTab() {
             <table className="min-w-full text-left text-sm">
               <tbody>
                 <tr className="border-t border-[color:var(--color-line)]">
-                  <td className="px-3 py-2 font-semibold">Pasada 320</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_320_USD)}</td>
+                  <td colSpan={2} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                    Pasada (vuelos/mes en escala)
+                  </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">Pasada 321</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_321_USD)}</td>
+                  <td className="px-3 py-2 font-semibold">Menos de {FB_BRACKET_MID_MIN}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    320 {moneyUsd(FB_TARIFA_320_USD)} · 321 {moneyUsd(FB_TARIFA_321_USD)}
+                  </td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 font-semibold">
+                    {FB_BRACKET_MID_MIN}–{FB_BRACKET_HIGH_MIN - 1}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    320 {moneyUsd(FB_BRACKET_200_399_TARIFA_320_USD)} · 321{' '}
+                    {moneyUsd(FB_BRACKET_200_399_TARIFA_321_USD)}
+                  </td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">{FB_BRACKET_HIGH_MIN} o más</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    320 {moneyUsd(FB_BRACKET_400_PLUS_TARIFA_320_USD)} · 321{' '}
+                    {moneyUsd(FB_BRACKET_400_PLUS_TARIFA_321_USD)}
+                  </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td className="px-3 py-2 font-semibold">Adicional</td>
@@ -214,13 +240,6 @@ export function TariffsTab() {
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
                   <td className="px-3 py-2 font-semibold">Micros</td>
                   <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_MICROS_USD)}</td>
-                </tr>
-                <tr className="border-t border-[color:var(--color-line)] bg-[color:var(--color-table-head)] font-bold">
-                  <td className="px-3 py-2">Total 320 / 321</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(FB_TARIFA_320_USD + FB_ADICIONALES_USD + FB_MICROS_USD)} /{' '}
-                    {moneyUsd(FB_TARIFA_321_USD + FB_ADICIONALES_USD + FB_MICROS_USD)}
-                  </td>
                 </tr>
               </tbody>
             </table>
@@ -258,21 +277,26 @@ export function TariffsTab() {
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">EZE dom. / inter.</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(ITC_MICROS_EZE_DOM_USD)} / {moneyUsd(ITC_MICROS_EZE_INTER_USD)}
-                  </td>
+                  <td className="px-3 py-2 font-semibold">EZE dom. (100% uso)</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_EZE_DOM_USD)}</td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
-                  <td className="px-3 py-2 font-semibold">AEP dom. / inter.</td>
+                  <td className="px-3 py-2 font-semibold">EZE inter. (0% uso)</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(0)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">
+                    AEP dom. / inter. ({(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con micros)
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(ITC_MICROS_AEP_DOM_USD)} / {moneyUsd(ITC_MICROS_AEP_INTER_USD)}
+                    {moneyUsd(ITC_MICROS_AEP_DOM_USD * ITC_MICROS_AEP_USO_FRACCION)} /{' '}
+                    {moneyUsd(ITC_MICROS_AEP_INTER_USD * ITC_MICROS_AEP_USO_FRACCION)}
                   </td>
                 </tr>
               </tbody>
             </table>
             <p className="border-t border-[color:var(--color-line)] px-3 py-2 text-xs text-[color:var(--color-muted)]">
-              Costo ITC = pasada + adicional + micros. Desc. madrugada dom. según ETD.
+              Costo ITC = pasada + adicional + micros esperados. Desc. madrugada dom. según ETD.
             </p>
           </div>
         </div>

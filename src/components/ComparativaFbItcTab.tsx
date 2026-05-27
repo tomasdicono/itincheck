@@ -4,10 +4,17 @@ import type { ProviderCostReport } from '../lib/providerCostReport'
 import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
   FB_ADICIONALES_USD,
+  FB_BRACKET_200_399_TARIFA_320_USD,
+  FB_BRACKET_200_399_TARIFA_321_USD,
+  FB_BRACKET_400_PLUS_TARIFA_320_USD,
+  FB_BRACKET_400_PLUS_TARIFA_321_USD,
+  FB_BRACKET_HIGH_MIN,
+  FB_BRACKET_MID_MIN,
   FB_MICROS_USD,
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
   ITC_MICROS_AEP_DOM_USD,
+  ITC_MICROS_AEP_USO_FRACCION,
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
   ITC_MICROS_EZE_INTER_USD,
@@ -59,8 +66,8 @@ export function ComparativaFbItcTab({
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
   const tariffDesc =
-    `Cada costo = pasada + adicional + micros por vuelo. FB pasada: 320 ${FB_TARIFA_320_USD} · 321 ${FB_TARIFA_321_USD} (col. L) + adicional ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
-    `ITC pasada según Rampa (dom. 320 ${RAMPA_DOM_320_USD} / 321 ${RAMPA_DOM_321_USD}, inter. ${RAMPA_INTER_320_USD}/${RAMPA_INTER_321_USD}) + adicional dom. ${RAMPA_ADICIONALES_USD} + micros (EZE dom. ${ITC_MICROS_EZE_DOM_USD} · inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · inter. ${ITC_MICROS_AEP_INTER_USD}). ` +
+    `Cada costo = pasada + adicional + micros. FB pasada (col. L) por vuelos del mes en la escala: menos de ${FB_BRACKET_MID_MIN} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_BRACKET_MID_MIN}–${FB_BRACKET_HIGH_MIN - 1} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_BRACKET_HIGH_MIN} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
+    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. Pasada Rampa + adic. dom. ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
