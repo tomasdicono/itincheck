@@ -12,6 +12,12 @@ import {
   RAMPA_INTER_321_USD,
   RAMPA_ADICIONALES_USD,
   RAMPA_REL_RES_USD,
+  ITC_ADIC_DOM_GPU_USD,
+  ITC_ADIC_DOM_REMOLQUE_USD,
+  ITC_ADIC_DOM_SENALEROS_USD,
+  ITC_ADIC_INTER_GPU_USD,
+  ITC_ADIC_INTER_REMOLQUE_USD,
+  ITC_ADIC_INTER_SENALEROS_USD,
   ITC_ADICIONALES_DOM_USD,
   ITC_ADICIONALES_INTER_USD,
   ITC_INTER_320_USD,
@@ -275,10 +281,23 @@ export function TariffsTab() {
                     {moneyUsd(ITC_INTER_320_USD)} / {moneyUsd(ITC_INTER_321_USD)}
                   </td>
                 </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td colSpan={2} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                    Adicionales Intercargo (Señaleros + GPU + Remolque)
+                  </td>
+                </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">Adicional dom. / inter.</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(ITC_ADICIONALES_DOM_USD)} / {moneyUsd(ITC_ADICIONALES_INTER_USD)}
+                  <td className="px-3 py-2 pl-6 font-semibold">Doméstico</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(ITC_ADIC_DOM_SENALEROS_USD)} + {moneyUsd(ITC_ADIC_DOM_GPU_USD)} +{' '}
+                    {moneyUsd(ITC_ADIC_DOM_REMOLQUE_USD)} = {moneyUsd(ITC_ADICIONALES_DOM_USD)}
+                  </td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
+                  <td className="px-3 py-2 pl-6 font-semibold">Internacional</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(ITC_ADIC_INTER_SENALEROS_USD)} + {moneyUsd(ITC_ADIC_INTER_GPU_USD)} +{' '}
+                    {moneyUsd(ITC_ADIC_INTER_REMOLQUE_USD)} = {moneyUsd(ITC_ADICIONALES_INTER_USD)}
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">

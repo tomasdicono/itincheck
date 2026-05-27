@@ -45,11 +45,22 @@ export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
 
-/** ITC tarifa actualizada — pasada internacional y adicionales (USD). */
+/** ITC tarifa actualizada — pasada internacional (USD). */
 export const ITC_INTER_320_USD = 1062
 export const ITC_INTER_321_USD = 1261
-export const ITC_ADICIONALES_DOM_USD = 3
-export const ITC_ADICIONALES_INTER_USD = 58
+
+/** ITC adicionales Intercargo: suma Señaleros + GPU + Remolque por vuelo. */
+export const ITC_ADIC_INTER_SENALEROS_USD = 92
+export const ITC_ADIC_INTER_GPU_USD = 58
+export const ITC_ADIC_INTER_REMOLQUE_USD = 63
+export const ITC_ADICIONALES_INTER_USD =
+  ITC_ADIC_INTER_SENALEROS_USD + ITC_ADIC_INTER_GPU_USD + ITC_ADIC_INTER_REMOLQUE_USD
+
+export const ITC_ADIC_DOM_SENALEROS_USD = 3.88
+export const ITC_ADIC_DOM_GPU_USD = 3.63
+export const ITC_ADIC_DOM_REMOLQUE_USD = 2.63
+export const ITC_ADICIONALES_DOM_USD =
+  ITC_ADIC_DOM_SENALEROS_USD + ITC_ADIC_DOM_GPU_USD + ITC_ADIC_DOM_REMOLQUE_USD
 
 /** ITC “tarifa vieja”: doméstico 320/321 (inter usa pasada ITC actual). */
 export const ITC_VIEJA_DOM_320_USD = 70

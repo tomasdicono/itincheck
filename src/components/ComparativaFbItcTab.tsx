@@ -79,7 +79,7 @@ export function ComparativaFbItcTab({
 
   const tariffDesc =
     `Cada costo = pasada + adicional + micros. FB pasada escalonada por orden de vuelo del mes (320 y 321 por separado, col. L): vuelos 1–${FB_ESCALON_TIER1_MAX} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_ESCALON_TIER1_MAX + 1}–${FB_ESCALON_TIER2_MAX} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_ESCALON_TIER2_MAX + 1} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
-    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. ITC pasada dom. ${RAMPA_DOM_320_USD}/${RAMPA_DOM_321_USD} + adic. ${ITC_ADICIONALES_DOM_USD}; inter. ${ITC_INTER_320_USD}/${ITC_INTER_321_USD} + adic. ${ITC_ADICIONALES_INTER_USD}. ` +
+    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. ITC pasada dom. ${RAMPA_DOM_320_USD}/${RAMPA_DOM_321_USD} + adic. Intercargo ${ITC_ADICIONALES_DOM_USD}; inter. ${ITC_INTER_320_USD}/${ITC_INTER_321_USD} + adic. ${ITC_ADICIONALES_INTER_USD}. ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
