@@ -89,8 +89,10 @@ export const FB_ESCALONADO_ETIQUETA = 'Escalonado 1–200 / 201–399 / 400+ (po
 export const FB_ADICIONALES_USD = 30
 export const FB_MICROS_USD = 72
 
-/** ITC micros: fracción de vuelos con uso de micros en AEP (60 % con, 40 % sin). */
-export const ITC_MICROS_AEP_USO_FRACCION = 0.6
+/** 60 % vuelos en remota (con micros) · 40 % en manga (sin micros). Aplica a FB e ITC. */
+export const MICROS_USO_REMOTA_FRACCION = 0.6
+/** @deprecated Usar MICROS_USO_REMOTA_FRACCION */
+export const ITC_MICROS_AEP_USO_FRACCION = MICROS_USO_REMOTA_FRACCION
 
 export const ITC_MICROS_EZE_INTER_USD = 270
 export const ITC_MICROS_EZE_DOM_USD = 12
@@ -662,18 +664,23 @@ type RampaBucketAgg = {
   vuelosConDescuentoMadrugada: number
 }
 
-function itcMicrosTarifaUsdPorVuelo(escala: string, inter: boolean): number {
+export function itcMicrosTarifaListaUsdPorVuelo(escala: string, inter: boolean): number {
   if (escala === 'EZE') return inter ? ITC_MICROS_EZE_INTER_USD : ITC_MICROS_EZE_DOM_USD
   if (escala === 'AEP') return inter ? ITC_MICROS_AEP_INTER_USD : ITC_MICROS_AEP_DOM_USD
   return 0
 }
 
-/** Micros ITC esperados: EZE dom. 100 % · EZE inter. 0 % · AEP 60 % de los vuelos con micros. */
-function itcMicrosUsdEsperadoPorVuelo(escala: string, inter: boolean): number {
-  const tarifa = itcMicrosTarifaUsdPorVuelo(escala, inter)
-  if (escala === 'EZE') return inter ? 0 : tarifa
-  if (escala === 'AEP') return Math.round(tarifa * ITC_MICROS_AEP_USO_FRACCION * 100) / 100
-  return tarifa
+/** Micros esperados por vuelo (60 % remota con micros, 40 % manga sin micros). */
+export function microsUsdEsperadoDesdeTarifaLista(tarifaListaUsd: number): number {
+  return Math.round(tarifaListaUsd * MICROS_USO_REMOTA_FRACCION * 100) / 100
+}
+
+export function fbMicrosUsdEsperadoPorVuelo(): number {
+  return microsUsdEsperadoDesdeTarifaLista(FB_MICROS_USD)
+}
+
+export function itcMicrosUsdEsperadoPorVuelo(escala: string, inter: boolean): number {
+  return microsUsdEsperadoDesdeTarifaLista(itcMicrosTarifaListaUsdPorVuelo(escala, inter))
 }
 
 /** Pasada FB del vuelo n (1-based) dentro del mes, por secuencia 320 u 321 (otro → 320). */
@@ -900,8 +907,9 @@ function fbItcComparativaPriceBump(b: FbItcBucketAgg, escala: string, row: unkno
   }
   b.fbPasadaUsd += pasadaFb
   b.fbAdicionalUsd += FB_ADICIONALES_USD
-  b.fbMicrosUsd += FB_MICROS_USD
-  b.costoFbUsd += pasadaFb + FB_ADICIONALES_USD + FB_MICROS_USD
+  const fbMicrosUsd = fbMicrosUsdEsperadoPorVuelo()
+  b.fbMicrosUsd += fbMicrosUsd
+  b.costoFbUsd += pasadaFb + FB_ADICIONALES_USD + fbMicrosUsd
 
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
   const { pasadaUsd, adicionalUsd } = rampaPasadaYAdicionalUsdPorVuelo(row, RAMPA_CONFIG_ITC_ACTUAL)
@@ -1022,7 +1030,7 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
  * Caso ITC (líneas ITC): además no se cuentan vuelos con operador JA en col. J (JZ sí).
  * Comparativa FB/ITC (AEP/EZE): FB pasada escalonada por orden de vuelo 320/321 (1–200 / 201–399 / 400+);
- * ITC micros con uso esperado (AEP 60 %, EZE dom. 100 %, EZE inter. 0 %).
+ * Micros FB e ITC: 60 % remota (con micros) · 40 % manga (sin micros).
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {
   const flySegPeriodMap = new Map<PeriodAggKey, PeriodCell>()

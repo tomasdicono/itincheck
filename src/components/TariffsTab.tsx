@@ -35,7 +35,9 @@ import {
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
   ITC_MICROS_AEP_DOM_USD,
-  ITC_MICROS_AEP_USO_FRACCION,
+  MICROS_USO_REMOTA_FRACCION,
+  fbMicrosUsdEsperadoPorVuelo,
+  itcMicrosUsdEsperadoPorVuelo,
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
   ITC_MICROS_EZE_INTER_USD,
@@ -248,8 +250,12 @@ export function TariffsTab() {
                   <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_ADICIONALES_USD)}</td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">Micros</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_MICROS_USD)}</td>
+                  <td className="px-3 py-2 font-semibold">
+                    Micros esperados ({(MICROS_USO_REMOTA_FRACCION * 100).toLocaleString('es-AR')}% remota)
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(FB_MICROS_USD)} lista → {moneyUsd(fbMicrosUsdEsperadoPorVuelo())}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -302,24 +308,26 @@ export function TariffsTab() {
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td colSpan={2} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
-                    Micros
+                    Micros esperados ({(MICROS_USO_REMOTA_FRACCION * 100).toLocaleString('es-AR')}% remota, FB e ITC)
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">EZE dom. (100% uso)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(ITC_MICROS_EZE_DOM_USD)}</td>
+                  <td className="px-3 py-2 font-semibold">EZE dom.</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(ITC_MICROS_EZE_DOM_USD)} → {moneyUsd(itcMicrosUsdEsperadoPorVuelo('EZE', false))}
+                  </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
-                  <td className="px-3 py-2 font-semibold">EZE inter. (0% uso)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(0)}</td>
+                  <td className="px-3 py-2 font-semibold">EZE inter.</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(ITC_MICROS_EZE_INTER_USD)} → {moneyUsd(itcMicrosUsdEsperadoPorVuelo('EZE', true))}
+                  </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">
-                    AEP dom. / inter. ({(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con micros)
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(ITC_MICROS_AEP_DOM_USD * ITC_MICROS_AEP_USO_FRACCION)} /{' '}
-                    {moneyUsd(ITC_MICROS_AEP_INTER_USD * ITC_MICROS_AEP_USO_FRACCION)}
+                  <td className="px-3 py-2 font-semibold">AEP dom. / inter.</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs text-[color:var(--color-muted)]">
+                    {moneyUsd(ITC_MICROS_AEP_DOM_USD)} → {moneyUsd(itcMicrosUsdEsperadoPorVuelo('AEP', false))} /{' '}
+                    {moneyUsd(ITC_MICROS_AEP_INTER_USD)} → {moneyUsd(itcMicrosUsdEsperadoPorVuelo('AEP', true))}
                   </td>
                 </tr>
               </tbody>

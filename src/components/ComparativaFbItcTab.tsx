@@ -13,18 +13,26 @@ import {
   FB_MICROS_USD,
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
-  ITC_MICROS_AEP_DOM_USD,
-  ITC_MICROS_AEP_USO_FRACCION,
-  ITC_MICROS_AEP_INTER_USD,
-  ITC_MICROS_EZE_DOM_USD,
-  ITC_MICROS_EZE_INTER_USD,
+  ITC_ADIC_DOM_GPU_USD,
+  ITC_ADIC_DOM_REMOLQUE_USD,
+  ITC_ADIC_DOM_SENALEROS_USD,
+  ITC_ADIC_INTER_GPU_USD,
+  ITC_ADIC_INTER_REMOLQUE_USD,
+  ITC_ADIC_INTER_SENALEROS_USD,
   ITC_ADICIONALES_DOM_USD,
   ITC_ADICIONALES_INTER_USD,
   ITC_INTER_320_USD,
   ITC_INTER_321_USD,
+  ITC_MICROS_AEP_DOM_USD,
+  ITC_MICROS_AEP_INTER_USD,
+  ITC_MICROS_EZE_DOM_USD,
+  ITC_MICROS_EZE_INTER_USD,
+  MICROS_USO_REMOTA_FRACCION,
   RAMPA_DOM_320_USD,
   RAMPA_DOM_321_USD,
   RAMPA_INTER_DESTINOS,
+  fbMicrosUsdEsperadoPorVuelo,
+  itcMicrosUsdEsperadoPorVuelo,
 } from '../lib/providerCostReport'
 
 const usdFmtPlain = new Intl.NumberFormat('es-AR', {
@@ -77,9 +85,13 @@ export function ComparativaFbItcTab({
   const diffArs = usdToArs(diffUsd, arsPerUsd)
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
+  const microsPct = (MICROS_USO_REMOTA_FRACCION * 100).toLocaleString('es-AR')
+  const fbMicrosEsp = fbMicrosUsdEsperadoPorVuelo()
+
   const tariffDesc =
-    `Cada costo = pasada + adicional + micros. FB pasada escalonada por orden de vuelo del mes (320 y 321 por separado, col. L): vuelos 1–${FB_ESCALON_TIER1_MAX} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_ESCALON_TIER1_MAX + 1}–${FB_ESCALON_TIER2_MAX} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_ESCALON_TIER2_MAX + 1} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
-    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. ITC pasada dom. ${RAMPA_DOM_320_USD}/${RAMPA_DOM_321_USD} + adic. Intercargo ${ITC_ADICIONALES_DOM_USD}; inter. ${ITC_INTER_320_USD}/${ITC_INTER_321_USD} + adic. ${ITC_ADICIONALES_INTER_USD}. ` +
+    `Cada costo = pasada + adicional + micros esperados (${microsPct}% remota con micros, ${(100 - MICROS_USO_REMOTA_FRACCION * 100).toLocaleString('es-AR')}% manga sin micros; FB e ITC). ` +
+    `FB pasada escalonada (col. L): vuelos 1–${FB_ESCALON_TIER1_MAX} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_ESCALON_TIER1_MAX + 1}–${FB_ESCALON_TIER2_MAX} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_ESCALON_TIER2_MAX + 1} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${fbMicrosEsp} (${FB_MICROS_USD}×${microsPct}%). ` +
+    `ITC pasada dom. ${RAMPA_DOM_320_USD}/${RAMPA_DOM_321_USD} + adic. ${ITC_ADICIONALES_DOM_USD}; inter. ${ITC_INTER_320_USD}/${ITC_INTER_321_USD} + adic. ${ITC_ADICIONALES_INTER_USD}. ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
@@ -181,10 +193,151 @@ export function ComparativaFbItcTab({
       </div>
 
       <section>
+        <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">
+          Tarifas por pasada y adicionales Intercargo
+        </h3>
+        <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+          Valores unitarios USD por vuelo según clasificación doméstica / internacional (columna I). Micros: tarifa lista
+          × {microsPct}% (remota con micros).
+        </p>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
+              <tr>
+                <th className="px-3 py-2.5 font-bold">Concepto</th>
+                <th className="px-3 py-2.5 text-right font-bold">Doméstico</th>
+                <th className="px-3 py-2.5 text-right font-bold">Internacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td colSpan={3} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                  Pasada ITC (320 / 321)
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 font-semibold">Equip. 320</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(RAMPA_DOM_320_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_INTER_320_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 font-semibold">Equip. 321</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(RAMPA_DOM_321_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_INTER_321_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td colSpan={3} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                  Pasada FB (por nº de vuelo 320 / 321 en el mes)
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 font-semibold">Vuelos 1–{FB_ESCALON_TIER1_MAX}</td>
+                <td className="px-3 py-2 text-right tabular-nums" colSpan={2}>
+                  {usdFmtPlain.format(FB_TARIFA_320_USD)} / {usdFmtPlain.format(FB_TARIFA_321_USD)}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 font-semibold">
+                  Vuelos {FB_ESCALON_TIER1_MAX + 1}–{FB_ESCALON_TIER2_MAX}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums" colSpan={2}>
+                  {usdFmtPlain.format(FB_BRACKET_200_399_TARIFA_320_USD)} /{' '}
+                  {usdFmtPlain.format(FB_BRACKET_200_399_TARIFA_321_USD)}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 font-semibold">Vuelos {FB_ESCALON_TIER2_MAX + 1}+</td>
+                <td className="px-3 py-2 text-right tabular-nums" colSpan={2}>
+                  {usdFmtPlain.format(FB_BRACKET_400_PLUS_TARIFA_320_USD)} /{' '}
+                  {usdFmtPlain.format(FB_BRACKET_400_PLUS_TARIFA_321_USD)}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td colSpan={3} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                  Adicionales ITC Intercargo
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 pl-5 font-semibold">Señaleros</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_DOM_SENALEROS_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_INTER_SENALEROS_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 pl-5 font-semibold">GPU</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_DOM_GPU_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_INTER_GPU_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 pl-5 font-semibold">Remolque</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_DOM_REMOLQUE_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADIC_INTER_REMOLQUE_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] font-semibold">
+                <td className="px-3 py-2">Total adicionales ITC</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADICIONALES_DOM_USD)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{usdFmtPlain.format(ITC_ADICIONALES_INTER_USD)}</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 font-semibold">Adicional FB (único)</td>
+                <td className="px-3 py-2 text-right tabular-nums" colSpan={2}>
+                  {usdFmtPlain.format(FB_ADICIONALES_USD)}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td colSpan={3} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
+                  Micros esperados ({microsPct}% remota)
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 font-semibold">FB (lista {usdFmtPlain.format(FB_MICROS_USD)})</td>
+                <td className="px-3 py-2 text-right tabular-nums" colSpan={2}>
+                  {usdFmtPlain.format(fbMicrosEsp)}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 pl-5 font-semibold">ITC AEP dom.</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {usdFmtPlain.format(itcMicrosUsdEsperadoPorVuelo('AEP', false))}
+                </td>
+                <td className="px-3 py-2 text-right text-[color:var(--color-muted)]">—</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 pl-5 font-semibold">ITC AEP inter.</td>
+                <td className="px-3 py-2 text-right text-[color:var(--color-muted)]">—</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {usdFmtPlain.format(itcMicrosUsdEsperadoPorVuelo('AEP', true))}
+                </td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)]">
+                <td className="px-3 py-2 pl-5 font-semibold">ITC EZE dom.</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {usdFmtPlain.format(itcMicrosUsdEsperadoPorVuelo('EZE', false))}
+                </td>
+                <td className="px-3 py-2 text-right text-[color:var(--color-muted)]">—</td>
+              </tr>
+              <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                <td className="px-3 py-2 pl-5 font-semibold">ITC EZE inter.</td>
+                <td className="px-3 py-2 text-right text-[color:var(--color-muted)]">—</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {usdFmtPlain.format(itcMicrosUsdEsperadoPorVuelo('EZE', true))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="border-t border-[color:var(--color-line)] px-3 py-2 text-xs text-[color:var(--color-muted)]">
+            ITC micros lista: AEP {usdFmtPlain.format(ITC_MICROS_AEP_DOM_USD)} dom. /{' '}
+            {usdFmtPlain.format(ITC_MICROS_AEP_INTER_USD)} inter. · EZE {usdFmtPlain.format(ITC_MICROS_EZE_DOM_USD)} dom. /{' '}
+            {usdFmtPlain.format(ITC_MICROS_EZE_INTER_USD)} inter. × {microsPct}% = esperado por vuelo en cada celda.
+          </p>
+        </div>
+      </section>
+
+      <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Detalle del cálculo</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Desglose por escala y mes: cada total = pasada + adicional + micros. FB: pasada escalonada por nº de vuelo
-          320/321 (ej. 201 vuelos 320 → 200×449 + 1×427). ITC: pasada + adicional dom./inter.; micros con uso esperado.
+          320/321 (ej. 201 vuelos 320 → 200×449 + 1×427). ITC: pasada + adicional dom./inter.; micros al {microsPct}%
+          (remota).
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
