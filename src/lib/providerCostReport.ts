@@ -45,7 +45,13 @@ export const RAMPA_ADICIONALES_USD = 31
 /** REL y RES: tarifa plana por vuelo (sin adicional de 31 USD). */
 export const RAMPA_REL_RES_USD = 550
 
-/** ITC “tarifa vieja”: doméstico 320/321 (inter sigue con tarifas Rampa actuales). */
+/** ITC tarifa actualizada — pasada internacional y adicionales (USD). */
+export const ITC_INTER_320_USD = 1062
+export const ITC_INTER_321_USD = 1261
+export const ITC_ADICIONALES_DOM_USD = 30
+export const ITC_ADICIONALES_INTER_USD = 58
+
+/** ITC “tarifa vieja”: doméstico 320/321 (inter usa pasada ITC actual). */
 export const ITC_VIEJA_DOM_320_USD = 70
 export const ITC_VIEJA_DOM_321_USD = 80
 
@@ -782,10 +788,10 @@ const RAMPA_CONFIG_ITC_ACTUAL: RampaTariffConfig = {
   relResUsd: RAMPA_REL_RES_USD,
   dom320Base: RAMPA_DOM_320_USD,
   dom321Base: RAMPA_DOM_321_USD,
-  inter320Base: RAMPA_INTER_320_USD,
-  inter321Base: RAMPA_INTER_321_USD,
-  adicionalesDomUsd: RAMPA_ADICIONALES_USD,
-  adicionalesInterUsd: 0,
+  inter320Base: ITC_INTER_320_USD,
+  inter321Base: ITC_INTER_321_USD,
+  adicionalesDomUsd: ITC_ADICIONALES_DOM_USD,
+  adicionalesInterUsd: ITC_ADICIONALES_INTER_USD,
   applyMadrugadaDomDiscount: true,
 }
 
@@ -794,10 +800,10 @@ const RAMPA_CONFIG_ITC_VIEJA: RampaTariffConfig = {
   relResUsd: RAMPA_REL_RES_USD,
   dom320Base: ITC_VIEJA_DOM_320_USD,
   dom321Base: ITC_VIEJA_DOM_321_USD,
-  inter320Base: RAMPA_INTER_320_USD,
-  inter321Base: RAMPA_INTER_321_USD,
-  adicionalesDomUsd: RAMPA_ADICIONALES_USD,
-  adicionalesInterUsd: 0,
+  inter320Base: ITC_INTER_320_USD,
+  inter321Base: ITC_INTER_321_USD,
+  adicionalesDomUsd: ITC_ADICIONALES_DOM_USD,
+  adicionalesInterUsd: ITC_ADICIONALES_INTER_USD,
   applyMadrugadaDomDiscount: false,
 }
 

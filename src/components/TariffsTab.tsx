@@ -12,6 +12,10 @@ import {
   RAMPA_INTER_321_USD,
   RAMPA_ADICIONALES_USD,
   RAMPA_REL_RES_USD,
+  ITC_ADICIONALES_DOM_USD,
+  ITC_ADICIONALES_INTER_USD,
+  ITC_INTER_320_USD,
+  ITC_INTER_321_USD,
   ITC_VIEJA_DOM_320_USD,
   ITC_VIEJA_DOM_321_USD,
   FB_ADICIONALES_USD,
@@ -268,12 +272,14 @@ export function TariffsTab() {
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td className="px-3 py-2 font-semibold">Inter. 320 / 321</td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {moneyUsd(RAMPA_INTER_320_USD)} / {moneyUsd(RAMPA_INTER_321_USD)}
+                    {moneyUsd(ITC_INTER_320_USD)} / {moneyUsd(ITC_INTER_321_USD)}
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">Adicional (solo dom.)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(RAMPA_ADICIONALES_USD)}</td>
+                  <td className="px-3 py-2 font-semibold">Adicional dom. / inter.</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {moneyUsd(ITC_ADICIONALES_DOM_USD)} / {moneyUsd(ITC_ADICIONALES_INTER_USD)}
+                  </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td colSpan={2} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
@@ -351,13 +357,13 @@ export function TariffsTab() {
               <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
                 <td className="px-3 py-2 font-semibold text-[color:var(--color-ink)]">ITC "Tarifa vieja" Dom. 320</td>
                 <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
-                  {moneyUsd(ITC_VIEJA_DOM_320_USD)} <span className="text-xs">(+{RAMPA_ADICIONALES_USD} adic.)</span>
+                  {moneyUsd(ITC_VIEJA_DOM_320_USD)} <span className="text-xs">(+{ITC_ADICIONALES_DOM_USD} adic.)</span>
                 </td>
               </tr>
               <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
                 <td className="px-3 py-2 font-semibold text-[color:var(--color-ink)]">ITC "Tarifa vieja" Dom. 321</td>
                 <td className="px-3 py-2 text-right tabular-nums text-[color:var(--color-muted)]">
-                  {moneyUsd(ITC_VIEJA_DOM_321_USD)} <span className="text-xs">(+{RAMPA_ADICIONALES_USD} adic.)</span>
+                  {moneyUsd(ITC_VIEJA_DOM_321_USD)} <span className="text-xs">(+{ITC_ADICIONALES_DOM_USD} adic.)</span>
                 </td>
               </tr>
             </tbody>

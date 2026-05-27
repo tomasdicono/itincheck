@@ -4,14 +4,15 @@ import { formatRampaLineDetalle } from '../lib/rampaDetalleText'
 import type { ProviderCostReport } from '../lib/providerCostReport'
 import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
+  ITC_ADICIONALES_DOM_USD,
+  ITC_ADICIONALES_INTER_USD,
+  ITC_INTER_320_USD,
+  ITC_INTER_321_USD,
   ITC_VIEJA_DOM_320_USD,
   ITC_VIEJA_DOM_321_USD,
-  RAMPA_ADICIONALES_USD,
   RAMPA_DESCUENTO_MADRUGADA,
   RAMPA_DOM_320_USD,
   RAMPA_DOM_321_USD,
-  RAMPA_INTER_320_USD,
-  RAMPA_INTER_321_USD,
   RAMPA_INTER_DESTINOS,
 } from '../lib/providerCostReport'
 
@@ -136,15 +137,15 @@ export function CasoItcTab({
   const diffPct = vieja !== 0 ? Math.round((diffUsd / vieja) * 10_000) / 100 : null
 
   const descActual =
-    `Sin escalas REL ni RES. No se incluyen vuelos con operador JA en columna J (JZ sí). Mismas tarifas que Costos Rampa: dom. 320 ${RAMPA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} · dom. 321 ` +
-    `${RAMPA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD} · inter. 320 ${RAMPA_INTER_320_USD} · inter. 321 ${RAMPA_INTER_321_USD} USD por vuelo (inter sin +${RAMPA_ADICIONALES_USD}). ` +
+    `Sin escalas REL ni RES. No se incluyen vuelos con operador JA en columna J (JZ sí). Dom. 320 ${RAMPA_DOM_320_USD} + ${ITC_ADICIONALES_DOM_USD} · dom. 321 ` +
+    `${RAMPA_DOM_321_USD} + ${ITC_ADICIONALES_DOM_USD} · inter. 320 ${ITC_INTER_320_USD} + ${ITC_ADICIONALES_INTER_USD} · inter. 321 ${ITC_INTER_321_USD} + ${ITC_ADICIONALES_INTER_USD} USD. ` +
     `Clasificación inter: columna I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. ` +
     `ETD 00:00–05:59 solo DOM: −${(RAMPA_DESCUENTO_MADRUGADA * 100).toLocaleString('es-AR')}% sobre tarifa + adicionales.`
 
   const descVieja =
-    `Sin REL/RES; sin operador JA en columna J (JZ sí). Dom. 320 ${ITC_VIEJA_DOM_320_USD} + ${RAMPA_ADICIONALES_USD} · dom. 321 ${ITC_VIEJA_DOM_321_USD} + ${RAMPA_ADICIONALES_USD} · ` +
-    `inter. 320 ${RAMPA_INTER_320_USD} · inter. 321 ${RAMPA_INTER_321_USD} USD por vuelo (inter sin +${RAMPA_ADICIONALES_USD}). ` +
-    `Otros equipamientos: misma regla que Rampa (tarifa 320 dom./inter.). Sin descuento madrugada.`
+    `Sin REL/RES; sin operador JA en columna J (JZ sí). Dom. 320 ${ITC_VIEJA_DOM_320_USD} + ${ITC_ADICIONALES_DOM_USD} · dom. 321 ${ITC_VIEJA_DOM_321_USD} + ${ITC_ADICIONALES_DOM_USD} · ` +
+    `inter. 320 ${ITC_INTER_320_USD} + ${ITC_ADICIONALES_INTER_USD} · inter. 321 ${ITC_INTER_321_USD} + ${ITC_ADICIONALES_INTER_USD} USD. ` +
+    `Otros equipamientos: misma regla (tarifa 320 dom./inter.). Sin descuento madrugada.`
 
   return (
     <div className="flex flex-col gap-6">

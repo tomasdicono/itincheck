@@ -18,11 +18,12 @@ import {
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
   ITC_MICROS_EZE_INTER_USD,
-  RAMPA_ADICIONALES_USD,
+  ITC_ADICIONALES_DOM_USD,
+  ITC_ADICIONALES_INTER_USD,
+  ITC_INTER_320_USD,
+  ITC_INTER_321_USD,
   RAMPA_DOM_320_USD,
   RAMPA_DOM_321_USD,
-  RAMPA_INTER_320_USD,
-  RAMPA_INTER_321_USD,
   RAMPA_INTER_DESTINOS,
 } from '../lib/providerCostReport'
 
@@ -78,7 +79,7 @@ export function ComparativaFbItcTab({
 
   const tariffDesc =
     `Cada costo = pasada + adicional + micros. FB pasada escalonada por orden de vuelo del mes (320 y 321 por separado, col. L): vuelos 1–${FB_ESCALON_TIER1_MAX} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_ESCALON_TIER1_MAX + 1}–${FB_ESCALON_TIER2_MAX} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_ESCALON_TIER2_MAX + 1} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
-    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. Pasada Rampa + adic. dom. ` +
+    `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. ITC pasada dom. ${RAMPA_DOM_320_USD}/${RAMPA_DOM_321_USD} + adic. ${ITC_ADICIONALES_DOM_USD}; inter. ${ITC_INTER_320_USD}/${ITC_INTER_321_USD} + adic. ${ITC_ADICIONALES_INTER_USD}. ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
   return (
@@ -183,7 +184,7 @@ export function ComparativaFbItcTab({
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Detalle del cálculo</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Desglose por escala y mes: cada total = pasada + adicional + micros. FB: pasada escalonada por nº de vuelo
-          320/321 (ej. 201 vuelos 320 → 200×449 + 1×427). ITC: pasada Rampa + adicional dom.; micros con uso esperado.
+          320/321 (ej. 201 vuelos 320 → 200×449 + 1×427). ITC: pasada + adicional dom./inter.; micros con uso esperado.
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">
