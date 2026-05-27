@@ -300,6 +300,21 @@ export type FbItcMicrosMonthLine = {
   vuelosTotalMes: number
   costoFbUsd: number
   costoItcUsd: number
+  /** Desglose FB (suma = costoFbUsd). */
+  fbPasadaUsd: number
+  fbAdicionalUsd: number
+  fbMicrosUsd: number
+  vuelosEquip320: number
+  vuelosEquip321: number
+  vuelosEquipOtro: number
+  fbBracketEtiqueta: string
+  fbTarifaPasada320Usd: number
+  fbTarifaPasada321Usd: number
+  /** Desglose ITC (suma = costoItcUsd). */
+  itcPasadaUsd: number
+  itcAdicionalUsd: number
+  itcMicrosUsd: number
+  itcVuelosDescMadrugada: number
 }
 
 export type ProviderCostReport = {
@@ -652,6 +667,12 @@ export function fbPasadaUsdPorEquipamiento(
   return is321 ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
 }
 
+export function fbBracketEtiqueta(vuelosMesEnEscala: number): string {
+  if (vuelosMesEnEscala >= FB_BRACKET_HIGH_MIN) return `${FB_BRACKET_HIGH_MIN}+ vuelos`
+  if (vuelosMesEnEscala >= FB_BRACKET_MID_MIN) return `${FB_BRACKET_MID_MIN}–${FB_BRACKET_HIGH_MIN - 1} vuelos`
+  return `menos de ${FB_BRACKET_MID_MIN} vuelos`
+}
+
 type FbItcBucketKey = string
 
 type FbItcBucketAgg = {
@@ -662,6 +683,16 @@ type FbItcBucketAgg = {
   vuelosInter: number
   costoFbUsd: number
   costoItcUsd: number
+  fbPasadaUsd: number
+  fbAdicionalUsd: number
+  fbMicrosUsd: number
+  vuelosEquip320: number
+  vuelosEquip321: number
+  vuelosEquipOtro: number
+  itcPasadaUsd: number
+  itcAdicionalUsd: number
+  itcMicrosUsd: number
+  itcVuelosDescMadrugada: number
 }
 
 function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAgg>): FbItcMicrosMonthLine[] {
@@ -678,6 +709,19 @@ function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAg
       vuelosTotalMes,
       costoFbUsd: Math.round(b.costoFbUsd * 100) / 100,
       costoItcUsd: Math.round(b.costoItcUsd * 100) / 100,
+      fbPasadaUsd: Math.round(b.fbPasadaUsd * 100) / 100,
+      fbAdicionalUsd: Math.round(b.fbAdicionalUsd * 100) / 100,
+      fbMicrosUsd: Math.round(b.fbMicrosUsd * 100) / 100,
+      vuelosEquip320: b.vuelosEquip320,
+      vuelosEquip321: b.vuelosEquip321,
+      vuelosEquipOtro: b.vuelosEquipOtro,
+      fbBracketEtiqueta: fbBracketEtiqueta(vuelosTotalMes),
+      fbTarifaPasada320Usd: fbPasadaUsdPorEquipamiento('320', vuelosTotalMes),
+      fbTarifaPasada321Usd: fbPasadaUsdPorEquipamiento('321', vuelosTotalMes),
+      itcPasadaUsd: Math.round(b.itcPasadaUsd * 100) / 100,
+      itcAdicionalUsd: Math.round(b.itcAdicionalUsd * 100) / 100,
+      itcMicrosUsd: Math.round(b.itcMicrosUsd * 100) / 100,
+      itcVuelosDescMadrugada: b.itcVuelosDescMadrugada,
     })
   }
   lines.sort((a, b) => {
@@ -781,21 +825,6 @@ function rampaUsdPorVueloConConfig(row: unknown[], cfg: RampaTariffConfig): numb
   return Math.round((pasadaUsd + adicionalUsd) * 100) / 100
 }
 
-/** FB comparativa: pasada (bracket por vuelos/mes en escala) + adicional + micros. */
-function fbComparativaUsdPorVuelo(row: unknown[], vuelosMesEnEscala: number): number {
-  const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
-  const pasadaBase = fbPasadaUsdPorEquipamiento(eq, vuelosMesEnEscala)
-  return Math.round((pasadaBase + FB_ADICIONALES_USD + FB_MICROS_USD) * 100) / 100
-}
-
-/** ITC comparativa: pasada Rampa + adicional dom. + micros (uso esperado por escala). */
-function itcComparativaUsdPorVuelo(row: unknown[], escala: string): number {
-  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
-  const { pasadaUsd, adicionalUsd } = rampaPasadaYAdicionalUsdPorVuelo(row, RAMPA_CONFIG_ITC_ACTUAL)
-  const microsUsd = itcMicrosUsdEsperadoPorVuelo(escala, inter)
-  return Math.round((pasadaUsd + adicionalUsd + microsUsd) * 100) / 100
-}
-
 function fbItcComparativaCountBump(
   map: Map<FbItcBucketKey, FbItcBucketAgg>,
   escala: string,
@@ -816,6 +845,16 @@ function fbItcComparativaCountBump(
       vuelosInter: 0,
       costoFbUsd: 0,
       costoItcUsd: 0,
+      fbPasadaUsd: 0,
+      fbAdicionalUsd: 0,
+      fbMicrosUsd: 0,
+      vuelosEquip320: 0,
+      vuelosEquip321: 0,
+      vuelosEquipOtro: 0,
+      itcPasadaUsd: 0,
+      itcAdicionalUsd: 0,
+      itcMicrosUsd: 0,
+      itcVuelosDescMadrugada: 0,
     }
     map.set(key, b)
   }
@@ -827,8 +866,29 @@ function fbItcComparativaCountBump(
 
 function fbItcComparativaPriceBump(b: FbItcBucketAgg, escala: string, row: unknown[]): void {
   const vuelosMes = b.vuelosDom + b.vuelosInter
-  b.costoFbUsd += fbComparativaUsdPorVuelo(row, vuelosMes)
-  b.costoItcUsd += itcComparativaUsdPorVuelo(row, escala)
+  const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
+  if (eq === '321') b.vuelosEquip321 += 1
+  else if (eq === '320') b.vuelosEquip320 += 1
+  else b.vuelosEquipOtro += 1
+
+  const pasadaFb = fbPasadaUsdPorEquipamiento(eq, vuelosMes)
+  b.fbPasadaUsd += pasadaFb
+  b.fbAdicionalUsd += FB_ADICIONALES_USD
+  b.fbMicrosUsd += FB_MICROS_USD
+  b.costoFbUsd += pasadaFb + FB_ADICIONALES_USD + FB_MICROS_USD
+
+  const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
+  const { pasadaUsd, adicionalUsd } = rampaPasadaYAdicionalUsdPorVuelo(row, RAMPA_CONFIG_ITC_ACTUAL)
+  const microsUsd = itcMicrosUsdEsperadoPorVuelo(escala, inter)
+  b.itcPasadaUsd += pasadaUsd
+  b.itcAdicionalUsd += adicionalUsd
+  b.itcMicrosUsd += microsUsd
+  b.costoItcUsd += pasadaUsd + adicionalUsd + microsUsd
+
+  const madrugada = rampaEtdEnVentanaMadrugada(row[COL_ETD])
+  if (RAMPA_CONFIG_ITC_ACTUAL.applyMadrugadaDomDiscount && madrugada && !inter) {
+    b.itcVuelosDescMadrugada += 1
+  }
 }
 
 function rampaBumpBucketWithConfig(

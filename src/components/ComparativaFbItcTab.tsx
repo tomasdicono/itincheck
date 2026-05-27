@@ -1,6 +1,6 @@
 import { DualMoneyTotal } from './DualMoneyTotal'
 import { formatArsWithUsd } from '../lib/formatDualCurrency'
-import type { ProviderCostReport } from '../lib/providerCostReport'
+import type { FbItcMicrosMonthLine, ProviderCostReport } from '../lib/providerCostReport'
 import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
   FB_ADICIONALES_USD,
@@ -44,6 +44,10 @@ function MoneyCell({ usd, arsPerUsd }: { usd: number; arsPerUsd: number | null }
   return <span className="text-[color:var(--color-muted)]">{usdFmtPlain.format(usd)}</span>
 }
 
+function sumLines(lines: FbItcMicrosMonthLine[], pick: (l: FbItcMicrosMonthLine) => number): number {
+  return Math.round(lines.reduce((s, l) => s + pick(l), 0) * 100) / 100
+}
+
 export function ComparativaFbItcTab({
   report,
   arsPerUsd,
@@ -59,8 +63,15 @@ export function ComparativaFbItcTab({
   tcQuoteDateIso: string | null
   tcQuoteProvider: UsdArsQuoteProvider | null
 }) {
+  const lines = report.fbItcMicrosLines
   const fbTotal = report.fbItcMicrosFbTotalUsd
   const itcTotal = report.fbItcMicrosItcTotalUsd
+  const detFbPasada = sumLines(lines, (l) => l.fbPasadaUsd)
+  const detFbAdic = sumLines(lines, (l) => l.fbAdicionalUsd)
+  const detFbMicros = sumLines(lines, (l) => l.fbMicrosUsd)
+  const detItcPasada = sumLines(lines, (l) => l.itcPasadaUsd)
+  const detItcAdic = sumLines(lines, (l) => l.itcAdicionalUsd)
+  const detItcMicros = sumLines(lines, (l) => l.itcMicrosUsd)
   const diffUsd = Math.round((fbTotal - itcTotal) * 100) / 100
   const diffArs = usdToArs(diffUsd, arsPerUsd)
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
@@ -113,14 +124,14 @@ export function ComparativaFbItcTab({
             </tr>
           </thead>
           <tbody>
-            {report.fbItcMicrosLines.length === 0 ? (
+            {lines.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
                   No hay vuelos en AEP/EZE con los datos y filtros actuales.
                 </td>
               </tr>
             ) : (
-              report.fbItcMicrosLines.map((line) => (
+              lines.map((line) => (
                 <tr
                   key={`${line.escala}-${line.mesIso}`}
                   className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
@@ -142,7 +153,7 @@ export function ComparativaFbItcTab({
               ))
             )}
           </tbody>
-          {report.fbItcMicrosLines.length > 0 ? (
+          {lines.length > 0 ? (
             <tfoot className="bg-[color:var(--color-table-head)] font-bold">
               <tr>
                 <td colSpan={5} className="border-t-2 border-[color:var(--color-line)] px-3 py-3 font-black">
@@ -167,6 +178,162 @@ export function ComparativaFbItcTab({
           ) : null}
         </table>
       </div>
+
+      <section>
+        <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Detalle del cálculo</h3>
+        <p className="mt-1 text-sm text-[color:var(--color-muted)]">
+          Desglose por escala y mes: cada total = pasada + adicional + micros. FB: pasada según bracket del mes (col.
+          L 320/321). ITC: pasada Rampa + adicional dom.; micros con uso esperado (AEP 60 %, EZE dom. 100 %, EZE inter.
+          0 %).
+        </p>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
+              <tr>
+                <th className="px-3 py-2.5 font-bold" rowSpan={2}>
+                  Escala
+                </th>
+                <th className="px-3 py-2.5 font-bold" rowSpan={2}>
+                  Mes
+                </th>
+                <th className="px-3 py-2.5 text-right font-bold" rowSpan={2}>
+                  Vuelos
+                </th>
+                <th className="px-3 py-2.5 font-bold" rowSpan={2}>
+                  Bracket FB
+                </th>
+                <th className="border-b border-[color:var(--color-line)] px-3 py-2 text-center font-bold" colSpan={3}>
+                  Equip. (col. L)
+                </th>
+                <th
+                  className="border-b border-l border-[color:var(--color-line)] px-3 py-2 text-center font-bold"
+                  colSpan={4}
+                >
+                  FB (USD)
+                </th>
+                <th
+                  className="border-b border-l border-[color:var(--color-line)] px-3 py-2 text-center font-bold"
+                  colSpan={4}
+                >
+                  ITC (USD)
+                </th>
+              </tr>
+              <tr>
+                <th className="px-3 py-2 text-right text-xs font-bold">320</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">321</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Otro</th>
+                <th className="border-l border-[color:var(--color-line)] px-3 py-2 text-right text-xs font-bold">
+                  Pasada
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Adic.</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Micros</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Total</th>
+                <th className="border-l border-[color:var(--color-line)] px-3 py-2 text-right text-xs font-bold">
+                  Pasada
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Adic.</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Micros</th>
+                <th className="px-3 py-2 text-right text-xs font-bold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.length === 0 ? (
+                <tr>
+                  <td colSpan={15} className="px-4 py-6 text-center text-[color:var(--color-muted)]">
+                    Sin datos para el detalle.
+                  </td>
+                </tr>
+              ) : (
+                lines.map((line) => (
+                  <tr
+                    key={`det-${line.escala}-${line.mesIso}`}
+                    className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
+                  >
+                    <td className="px-3 py-2 font-mono font-bold">{line.escala}</td>
+                    <td className="px-3 py-2 capitalize">{line.mesEtiqueta}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosTotalMes.toLocaleString('es-AR')}</td>
+                    <td className="px-3 py-2 text-xs">
+                      <span className="font-semibold">{line.fbBracketEtiqueta}</span>
+                      <br />
+                      <span className="text-[color:var(--color-muted)]">
+                        320 {usdFmtPlain.format(line.fbTarifaPasada320Usd)} · 321{' '}
+                        {usdFmtPlain.format(line.fbTarifaPasada321Usd)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosEquip320.toLocaleString('es-AR')}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosEquip321.toLocaleString('es-AR')}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{line.vuelosEquipOtro.toLocaleString('es-AR')}</td>
+                    <td className="border-l border-[color:var(--color-line)] px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.fbPasadaUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.fbAdicionalUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.fbMicrosUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                      <MoneyCell usd={line.costoFbUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="border-l border-[color:var(--color-line)] px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.itcPasadaUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.itcAdicionalUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <MoneyCell usd={line.itcMicrosUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                      <MoneyCell usd={line.costoItcUsd} arsPerUsd={arsPerUsd} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {lines.length > 0 ? (
+              <tfoot className="bg-[color:var(--color-table-head)] text-sm font-bold">
+                <tr>
+                  <td colSpan={4} className="border-t-2 border-[color:var(--color-line)] px-3 py-3">
+                    Total
+                  </td>
+                  <td colSpan={3} className="border-t-2 border-[color:var(--color-line)] px-3 py-3" />
+                  <td className="border-t-2 border-l border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detFbPasada} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detFbAdic} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detFbMicros} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={fbTotal} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-l border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detItcPasada} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detItcAdic} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={detItcMicros} arsPerUsd={arsPerUsd} />
+                  </td>
+                  <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right tabular-nums">
+                    <MoneyCell usd={itcTotal} arsPerUsd={arsPerUsd} />
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+        </div>
+        {lines.some((l) => l.itcVuelosDescMadrugada > 0) ? (
+          <p className="mt-2 text-xs text-[color:var(--color-muted)]">
+            ITC pasada/adic. dom.: {lines.reduce((s, l) => s + l.itcVuelosDescMadrugada, 0).toLocaleString('es-AR')}{' '}
+            vuelo(s) con descuento madrugada (ETD 00:00–05:59, −37,5 % sobre tarifa + adic.).
+          </p>
+        ) : null}
+      </section>
 
       <section className="rounded-2xl border border-[color:var(--color-line)] bg-white p-5">
         <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--color-brand-celeste-muted)]">
