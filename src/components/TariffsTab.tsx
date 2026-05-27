@@ -15,9 +15,9 @@ import {
   ITC_VIEJA_DOM_320_USD,
   ITC_VIEJA_DOM_321_USD,
   FB_ADICIONALES_USD,
-  FB_MICROS_PROMEDIO_USD,
-  FB_TARIFA_UNICA_USD,
-  FB_USD_POR_VUELO,
+  FB_MICROS_USD,
+  FB_TARIFA_320_USD,
+  FB_TARIFA_321_USD,
   ITC_MICROS_AEP_DOM_USD,
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
@@ -200,20 +200,27 @@ export function TariffsTab() {
             <table className="min-w-full text-left text-sm">
               <tbody>
                 <tr className="border-t border-[color:var(--color-line)]">
-                  <td className="px-3 py-2 font-semibold">Pasada (tarifa única)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_UNICA_USD)}</td>
+                  <td className="px-3 py-2 font-semibold">Pasada 320</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_320_USD)}</td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">Pasada 321</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_TARIFA_321_USD)}</td>
+                </tr>
+                <tr className="border-t border-[color:var(--color-line)]">
                   <td className="px-3 py-2 font-semibold">Adicional</td>
                   <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_ADICIONALES_USD)}</td>
                 </tr>
-                <tr className="border-t border-[color:var(--color-line)]">
-                  <td className="px-3 py-2 font-semibold">Micros (promedio)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_MICROS_PROMEDIO_USD)}</td>
+                <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
+                  <td className="px-3 py-2 font-semibold">Micros</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_MICROS_USD)}</td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] bg-[color:var(--color-table-head)] font-bold">
-                  <td className="px-3 py-2">Total por vuelo</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{moneyUsd(FB_USD_POR_VUELO)}</td>
+                  <td className="px-3 py-2">Total 320 / 321</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {moneyUsd(FB_TARIFA_320_USD + FB_ADICIONALES_USD + FB_MICROS_USD)} /{' '}
+                    {moneyUsd(FB_TARIFA_321_USD + FB_ADICIONALES_USD + FB_MICROS_USD)}
+                  </td>
                 </tr>
               </tbody>
             </table>

@@ -49,11 +49,11 @@ export const RAMPA_REL_RES_USD = 550
 export const ITC_VIEJA_DOM_320_USD = 70
 export const ITC_VIEJA_DOM_321_USD = 80
 
-/** Comparativa FB / ITC micros (USD por vuelo en AEP/EZE). */
-export const FB_TARIFA_UNICA_USD = 494
-export const FB_ADICIONALES_USD = 50
-export const FB_MICROS_PROMEDIO_USD = 150
-export const FB_USD_POR_VUELO = FB_TARIFA_UNICA_USD + FB_ADICIONALES_USD + FB_MICROS_PROMEDIO_USD
+/** Comparativa FB / ITC (USD por vuelo en AEP/EZE). */
+export const FB_TARIFA_320_USD = 449
+export const FB_TARIFA_321_USD = 473
+export const FB_ADICIONALES_USD = 30
+export const FB_MICROS_USD = 72
 
 export const ITC_MICROS_EZE_INTER_USD = 270
 export const ITC_MICROS_EZE_DOM_USD = 12
@@ -745,6 +745,13 @@ function rampaUsdPorVueloConConfig(row: unknown[], cfg: RampaTariffConfig): numb
   return Math.round((pasadaUsd + adicionalUsd) * 100) / 100
 }
 
+/** FB comparativa: pasada (320/321, col. L) + adicional + micros por vuelo. */
+function fbComparativaUsdPorVuelo(row: unknown[]): number {
+  const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
+  const pasadaBase = eq === '321' ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
+  return Math.round((pasadaBase + FB_ADICIONALES_USD + FB_MICROS_USD) * 100) / 100
+}
+
 /** ITC comparativa: pasada Rampa + adicional dom. + micros por escala/dom-inter. */
 function itcComparativaUsdPorVuelo(row: unknown[], escala: string): number {
   const inter = rampaInternacionalDesdeColumnaI(row[COL_DESTINO])
@@ -781,7 +788,7 @@ function fbItcComparativaBumpBucket(
   if (inter) b.vuelosInter += 1
   else b.vuelosDom += 1
 
-  b.costoFbUsd += FB_USD_POR_VUELO
+  b.costoFbUsd += fbComparativaUsdPorVuelo(row)
   b.costoItcUsd += itcComparativaUsdPorVuelo(row, escala)
 }
 

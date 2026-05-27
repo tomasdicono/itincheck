@@ -4,9 +4,9 @@ import type { ProviderCostReport } from '../lib/providerCostReport'
 import type { UsdArsQuoteProvider } from '../lib/usdArsSellQuote'
 import {
   FB_ADICIONALES_USD,
-  FB_MICROS_PROMEDIO_USD,
-  FB_TARIFA_UNICA_USD,
-  FB_USD_POR_VUELO,
+  FB_MICROS_USD,
+  FB_TARIFA_320_USD,
+  FB_TARIFA_321_USD,
   ITC_MICROS_AEP_DOM_USD,
   ITC_MICROS_AEP_INTER_USD,
   ITC_MICROS_EZE_DOM_USD,
@@ -59,7 +59,7 @@ export function ComparativaFbItcTab({
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
   const tariffDesc =
-    `Cada costo = pasada + adicional + micros por vuelo. FB: ${FB_TARIFA_UNICA_USD} + ${FB_ADICIONALES_USD} + ${FB_MICROS_PROMEDIO_USD} = ${FB_USD_POR_VUELO} USD fijo. ` +
+    `Cada costo = pasada + adicional + micros por vuelo. FB pasada: 320 ${FB_TARIFA_320_USD} · 321 ${FB_TARIFA_321_USD} (col. L) + adicional ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
     `ITC pasada según Rampa (dom. 320 ${RAMPA_DOM_320_USD} / 321 ${RAMPA_DOM_321_USD}, inter. ${RAMPA_INTER_320_USD}/${RAMPA_INTER_321_USD}) + adicional dom. ${RAMPA_ADICIONALES_USD} + micros (EZE dom. ${ITC_MICROS_EZE_DOM_USD} · inter. ${ITC_MICROS_EZE_INTER_USD} · AEP dom. ${ITC_MICROS_AEP_DOM_USD} · inter. ${ITC_MICROS_AEP_INTER_USD}). ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
@@ -172,7 +172,7 @@ export function ComparativaFbItcTab({
           <div className="rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-page)]/50 p-3">
             <dt className="text-xs font-bold uppercase text-[color:var(--color-muted)]">Costo FB</dt>
             <dd className="mt-0.5 text-xs text-[color:var(--color-muted)]">
-              Pasada + adicional + micros ({usdFmtPlain.format(FB_USD_POR_VUELO)}/vuelo)
+              Pasada (320/321) + adicional + micros por vuelo
             </dd>
             <dd className="mt-1 font-black tabular-nums">{usdFmtPlain.format(fbTotal)}</dd>
             <dd className="mt-1 text-xs font-semibold text-[color:var(--color-muted)]">
