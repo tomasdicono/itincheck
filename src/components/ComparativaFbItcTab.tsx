@@ -8,8 +8,8 @@ import {
   FB_BRACKET_200_399_TARIFA_321_USD,
   FB_BRACKET_400_PLUS_TARIFA_320_USD,
   FB_BRACKET_400_PLUS_TARIFA_321_USD,
-  FB_BRACKET_HIGH_MIN,
-  FB_BRACKET_MID_MIN,
+  FB_ESCALON_TIER1_MAX,
+  FB_ESCALON_TIER2_MAX,
   FB_MICROS_USD,
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
@@ -77,7 +77,7 @@ export function ComparativaFbItcTab({
   const diffPct = itcTotal !== 0 ? Math.round((diffUsd / itcTotal) * 10_000) / 100 : null
 
   const tariffDesc =
-    `Cada costo = pasada + adicional + micros. FB pasada (col. L) por vuelos del mes en la escala: menos de ${FB_BRACKET_MID_MIN} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_BRACKET_MID_MIN}–${FB_BRACKET_HIGH_MIN - 1} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_BRACKET_HIGH_MIN} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
+    `Cada costo = pasada + adicional + micros. FB pasada escalonada por orden de vuelo del mes (320 y 321 por separado, col. L): vuelos 1–${FB_ESCALON_TIER1_MAX} → 320 ${FB_TARIFA_320_USD}/321 ${FB_TARIFA_321_USD}; ${FB_ESCALON_TIER1_MAX + 1}–${FB_ESCALON_TIER2_MAX} → ${FB_BRACKET_200_399_TARIFA_320_USD}/${FB_BRACKET_200_399_TARIFA_321_USD}; desde ${FB_ESCALON_TIER2_MAX + 1} → ${FB_BRACKET_400_PLUS_TARIFA_320_USD}/${FB_BRACKET_400_PLUS_TARIFA_321_USD}. + adic. ${FB_ADICIONALES_USD} + micros ${FB_MICROS_USD}. ` +
     `ITC micros esperados: AEP ${(ITC_MICROS_AEP_USO_FRACCION * 100).toLocaleString('es-AR')}% con uso; EZE dom. 100%; EZE inter. 0%. Pasada Rampa + adic. dom. ` +
     `Inter.: col. I ∈ {${RAMPA_INTER_DESTINOS.join(', ')}}. Sin operador JA (col. J); JZ sí.`
 
@@ -182,9 +182,8 @@ export function ComparativaFbItcTab({
       <section>
         <h3 className="text-lg font-black tracking-tight text-[color:var(--color-ink)]">Detalle del cálculo</h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          Desglose por escala y mes: cada total = pasada + adicional + micros. FB: pasada según bracket del mes (col.
-          L 320/321). ITC: pasada Rampa + adicional dom.; micros con uso esperado (AEP 60 %, EZE dom. 100 %, EZE inter.
-          0 %).
+          Desglose por escala y mes: cada total = pasada + adicional + micros. FB: pasada escalonada por nº de vuelo
+          320/321 (ej. 201 vuelos 320 → 200×449 + 1×427). ITC: pasada Rampa + adicional dom.; micros con uso esperado.
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--color-line)]">
           <table className="min-w-full text-left text-sm">

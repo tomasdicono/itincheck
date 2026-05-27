@@ -50,17 +50,24 @@ export const ITC_VIEJA_DOM_320_USD = 70
 export const ITC_VIEJA_DOM_321_USD = 80
 
 /** Comparativa FB / ITC (USD por vuelo en AEP/EZE). */
-/** FB pasada base (menos de 200 vuelos/mes en la escala). */
+/** FB pasada escalonada por nº de vuelo del mes (por tipo 320/321 en col. L), no por total del mes. */
+export const FB_ESCALON_TIER1_MAX = 200
+export const FB_ESCALON_TIER2_MAX = 399
+/** Vuelos 1–200 del mes (por equipamiento). */
 export const FB_TARIFA_320_USD = 449
 export const FB_TARIFA_321_USD = 473
-/** FB pasada si el mes en la escala tiene 200–399 vuelos. */
+/** Vuelos 201–399. */
 export const FB_BRACKET_200_399_TARIFA_320_USD = 427
 export const FB_BRACKET_200_399_TARIFA_321_USD = 449
-/** FB pasada si el mes en la escala tiene ≥ 400 vuelos. */
+/** Vuelos 400 en adelante. */
 export const FB_BRACKET_400_PLUS_TARIFA_320_USD = 406
 export const FB_BRACKET_400_PLUS_TARIFA_321_USD = 427
-export const FB_BRACKET_MID_MIN = 200
-export const FB_BRACKET_HIGH_MIN = 400
+/** @deprecated Usar FB_ESCALON_TIER1_MAX */
+export const FB_BRACKET_MID_MIN = FB_ESCALON_TIER1_MAX
+/** @deprecated Usar FB_ESCALON_TIER2_MAX + 1 */
+export const FB_BRACKET_HIGH_MIN = FB_ESCALON_TIER2_MAX + 1
+
+export const FB_ESCALONADO_ETIQUETA = 'Escalonado 1–200 / 201–399 / 400+ (por 320 y 321)'
 
 export const FB_ADICIONALES_USD = 30
 export const FB_MICROS_USD = 72
@@ -652,25 +659,23 @@ function itcMicrosUsdEsperadoPorVuelo(escala: string, inter: boolean): number {
   return tarifa
 }
 
-/** Pasada FB según equipamiento (col. L) y vuelos del mes en la escala (brackets). */
-export function fbPasadaUsdPorEquipamiento(
-  eq: '320' | '321' | 'otro',
-  vuelosMesEnEscala: number,
-): number {
-  const is321 = eq === '321'
-  if (vuelosMesEnEscala >= FB_BRACKET_HIGH_MIN) {
-    return is321 ? FB_BRACKET_400_PLUS_TARIFA_321_USD : FB_BRACKET_400_PLUS_TARIFA_320_USD
+/** Pasada FB del vuelo n (1-based) dentro del mes, por secuencia 320 u 321 (otro → 320). */
+export function fbPasadaUsdMarginalPorSecuencia(secuenciaVuelo: number, is321: boolean): number {
+  if (secuenciaVuelo <= FB_ESCALON_TIER1_MAX) {
+    return is321 ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
   }
-  if (vuelosMesEnEscala >= FB_BRACKET_MID_MIN) {
+  if (secuenciaVuelo <= FB_ESCALON_TIER2_MAX) {
     return is321 ? FB_BRACKET_200_399_TARIFA_321_USD : FB_BRACKET_200_399_TARIFA_320_USD
   }
-  return is321 ? FB_TARIFA_321_USD : FB_TARIFA_320_USD
+  return is321 ? FB_BRACKET_400_PLUS_TARIFA_321_USD : FB_BRACKET_400_PLUS_TARIFA_320_USD
 }
 
-export function fbBracketEtiqueta(vuelosMesEnEscala: number): string {
-  if (vuelosMesEnEscala >= FB_BRACKET_HIGH_MIN) return `${FB_BRACKET_HIGH_MIN}+ vuelos`
-  if (vuelosMesEnEscala >= FB_BRACKET_MID_MIN) return `${FB_BRACKET_MID_MIN}–${FB_BRACKET_HIGH_MIN - 1} vuelos`
-  return `menos de ${FB_BRACKET_MID_MIN} vuelos`
+/** Promedio de pasada escalonada para mostrar en tarifarios (suma de tramos / cantidad). */
+export function fbPasadaPromedioEscalonado(cantidadVuelos: number, is321: boolean): number {
+  if (cantidadVuelos <= 0) return 0
+  let sum = 0
+  for (let i = 1; i <= cantidadVuelos; i++) sum += fbPasadaUsdMarginalPorSecuencia(i, is321)
+  return Math.round((sum / cantidadVuelos) * 100) / 100
 }
 
 type FbItcBucketKey = string
@@ -715,9 +720,9 @@ function buildFbItcMicrosLinesFromBuckets(map: Map<FbItcBucketKey, FbItcBucketAg
       vuelosEquip320: b.vuelosEquip320,
       vuelosEquip321: b.vuelosEquip321,
       vuelosEquipOtro: b.vuelosEquipOtro,
-      fbBracketEtiqueta: fbBracketEtiqueta(vuelosTotalMes),
-      fbTarifaPasada320Usd: fbPasadaUsdPorEquipamiento('320', vuelosTotalMes),
-      fbTarifaPasada321Usd: fbPasadaUsdPorEquipamiento('321', vuelosTotalMes),
+      fbBracketEtiqueta: FB_ESCALONADO_ETIQUETA,
+      fbTarifaPasada320Usd: fbPasadaPromedioEscalonado(b.vuelosEquip320 + b.vuelosEquipOtro, false),
+      fbTarifaPasada321Usd: fbPasadaPromedioEscalonado(b.vuelosEquip321, true),
       itcPasadaUsd: Math.round(b.itcPasadaUsd * 100) / 100,
       itcAdicionalUsd: Math.round(b.itcAdicionalUsd * 100) / 100,
       itcMicrosUsd: Math.round(b.itcMicrosUsd * 100) / 100,
@@ -865,13 +870,17 @@ function fbItcComparativaCountBump(
 }
 
 function fbItcComparativaPriceBump(b: FbItcBucketAgg, escala: string, row: unknown[]): void {
-  const vuelosMes = b.vuelosDom + b.vuelosInter
   const eq = detectProgrammingEquipamiento(row[COL_MATERIAL])
-  if (eq === '321') b.vuelosEquip321 += 1
-  else if (eq === '320') b.vuelosEquip320 += 1
-  else b.vuelosEquipOtro += 1
-
-  const pasadaFb = fbPasadaUsdPorEquipamiento(eq, vuelosMes)
+  let pasadaFb = 0
+  if (eq === '321') {
+    b.vuelosEquip321 += 1
+    pasadaFb = fbPasadaUsdMarginalPorSecuencia(b.vuelosEquip321, true)
+  } else {
+    if (eq === '320') b.vuelosEquip320 += 1
+    else b.vuelosEquipOtro += 1
+    const seq320 = b.vuelosEquip320 + b.vuelosEquipOtro
+    pasadaFb = fbPasadaUsdMarginalPorSecuencia(seq320, false)
+  }
   b.fbPasadaUsd += pasadaFb
   b.fbAdicionalUsd += FB_ADICIONALES_USD
   b.fbMicrosUsd += FB_MICROS_USD
@@ -995,7 +1004,7 @@ function buildRampaLinesFromBuckets(map: Map<RampaBucketKey, RampaBucketAgg>): R
  * Rampa (tabla principal): USD por vuelo según equipamiento (col. L), destino (col. I) y escala (REL/RES tarifa plana). ETD col. D
  * 00:00–05:59 en vuelos domésticos (excepto REL/RES): −37,5 % sobre tarifa + adicionales; internacional sin ese desc.
  * Caso ITC (líneas ITC): además no se cuentan vuelos con operador JA en col. J (JZ sí).
- * Comparativa FB/ITC (AEP/EZE): FB pasada por bracket de vuelos del mes en la escala (200–399 / ≥400);
+ * Comparativa FB/ITC (AEP/EZE): FB pasada escalonada por orden de vuelo 320/321 (1–200 / 201–399 / 400+);
  * ITC micros con uso esperado (AEP 60 %, EZE dom. 100 %, EZE inter. 0 %).
  */
 export function buildProviderCostReport(rawMatrix: unknown[][]): ProviderCostReport {

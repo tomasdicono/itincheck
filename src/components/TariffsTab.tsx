@@ -19,8 +19,8 @@ import {
   FB_BRACKET_200_399_TARIFA_321_USD,
   FB_BRACKET_400_PLUS_TARIFA_320_USD,
   FB_BRACKET_400_PLUS_TARIFA_321_USD,
-  FB_BRACKET_HIGH_MIN,
-  FB_BRACKET_MID_MIN,
+  FB_ESCALON_TIER1_MAX,
+  FB_ESCALON_TIER2_MAX,
   FB_MICROS_USD,
   FB_TARIFA_320_USD,
   FB_TARIFA_321_USD,
@@ -208,18 +208,18 @@ export function TariffsTab() {
               <tbody>
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td colSpan={2} className="px-3 py-2 text-xs font-bold uppercase text-[color:var(--color-muted)]">
-                    Pasada (vuelos/mes en escala)
+                    Pasada escalonada (por orden de vuelo 320 / 321 en el mes)
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">Menos de {FB_BRACKET_MID_MIN}</td>
+                  <td className="px-3 py-2 font-semibold">Vuelos 1–{FB_ESCALON_TIER1_MAX}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     320 {moneyUsd(FB_TARIFA_320_USD)} · 321 {moneyUsd(FB_TARIFA_321_USD)}
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)]">
                   <td className="px-3 py-2 font-semibold">
-                    {FB_BRACKET_MID_MIN}–{FB_BRACKET_HIGH_MIN - 1}
+                    Vuelos {FB_ESCALON_TIER1_MAX + 1}–{FB_ESCALON_TIER2_MAX}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     320 {moneyUsd(FB_BRACKET_200_399_TARIFA_320_USD)} · 321{' '}
@@ -227,7 +227,7 @@ export function TariffsTab() {
                   </td>
                 </tr>
                 <tr className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40">
-                  <td className="px-3 py-2 font-semibold">{FB_BRACKET_HIGH_MIN} o más</td>
+                  <td className="px-3 py-2 font-semibold">Vuelos {FB_ESCALON_TIER2_MAX + 1} en adelante</td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     320 {moneyUsd(FB_BRACKET_400_PLUS_TARIFA_320_USD)} · 321{' '}
                     {moneyUsd(FB_BRACKET_400_PLUS_TARIFA_321_USD)}
@@ -243,6 +243,10 @@ export function TariffsTab() {
                 </tr>
               </tbody>
             </table>
+            <p className="border-t border-[color:var(--color-line)] px-3 py-2 text-xs text-[color:var(--color-muted)]">
+              Ej.: 201 vuelos 320 en el mes → 200×{moneyUsd(FB_TARIFA_320_USD)} + 1×
+              {moneyUsd(FB_BRACKET_200_399_TARIFA_320_USD)} de pasada.
+            </p>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[color:var(--color-line)]">
             <p className="border-b border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-2 text-sm font-bold">
