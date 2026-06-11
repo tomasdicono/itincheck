@@ -257,9 +257,8 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
   let n321 = 0
   let notro = 0
 
-  type SlotKey = string
-  type HoraSlotAgg = { fechaIso: string; escala: string; hora: number; cantidad: number; vuelos: Set<string> }
-  const hourSlots = new Map<SlotKey, HoraSlotAgg>()
+  type FlightInfo = { vuelo: string; minutos: number }
+  const flightsPerDayEscala = new Map<string, FlightInfo[]>()
   type MinuteKey = string
   const minuteGroups = new Map<
     MinuteKey,
@@ -309,22 +308,20 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     else if (eq === '321') n321++
     else notro++
 
-    const h = etdHour(etdVal)
-    if (h != null && escala !== '—') {
-      const dayStr = format(opDate, 'yyyy-MM-dd')
-      const key: SlotKey = `${dayStr}|${escala}|${h}`
-      const vueloH = normalizeVuelo(vueloVal)
-      let agg = hourSlots.get(key)
-      if (!agg) {
-        agg = { fechaIso: dayStr, escala, hora: h, cantidad: 0, vuelos: new Set<string>() }
-        hourSlots.set(key, agg)
-      }
-      agg.cantidad += 1
-      if (vueloH !== '—') agg.vuelos.add(vueloH)
-    }
-
     const minute = etdMinute(etdVal)
     const mEtd = minute != null ? etdMinutesFromMidnight(etdVal) : null
+
+    if (mEtd != null && escala !== '—') {
+      const dayStr = format(opDate, 'yyyy-MM-dd')
+      const key = `${dayStr}|${escala}`
+      const vueloH = normalizeVuelo(vueloVal)
+      let list = flightsPerDayEscala.get(key)
+      if (!list) {
+        list = []
+        flightsPerDayEscala.set(key, list)
+      }
+      list.push({ vuelo: vueloH, minutos: mEtd })
+    }
     const ventana = ITC_VENTANAS[escala]
     if (ventana && minute != null && mEtd != null && escala !== '—') {
       let extrasMin = 0
@@ -444,23 +441,60 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
       }
     })
 
-  const simultaneidadMasCuatro = [...hourSlots.values()]
-    .filter((s) => s.cantidad > 4)
-    .sort((a, b) => {
-      if (a.fechaIso !== b.fechaIso) return a.fechaIso.localeCompare(b.fechaIso)
-      if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
-      return a.hora - b.hora
-    })
-    .map((s) => {
-      const hh = String(s.hora).padStart(2, '0')
-      return {
-        fecha: format(parse(s.fechaIso, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy'),
-        escala: s.escala,
-        franjaHoraria: `${hh}:00–${hh}:59`,
-        cantidadVuelos: s.cantidad,
-        vuelos: [...s.vuelos].sort((a, b) => a.localeCompare(b)),
+  const simultaneidadMasCuatro: {
+    fechaIso: string
+    fecha: string
+    escala: string
+    franjaHoraria: string
+    cantidadVuelos: number
+    vuelos: string[]
+  }[] = []
+
+  const reportedSets = new Set<string>()
+
+  for (const [key, flights] of flightsPerDayEscala.entries()) {
+    const [fechaIso, escala] = key.split('|')
+    flights.sort((a, b) => a.minutos - b.minutos)
+
+    for (let i = 0; i < flights.length; i++) {
+      const startMin = flights[i].minutos
+      // Ventana de 60 minutos: inclusive desde startMin hasta startMin + 59
+      const endMin = startMin + 60
+
+      const inWindow = flights.filter((f) => f.minutos >= startMin && f.minutos < endMin)
+      if (inWindow.length > 4) {
+        const vuelosEnVentana = inWindow.map((f) => f.vuelo).filter((v) => v !== '—')
+        const uniqueVuelos = [...new Set(vuelosEnVentana)].sort()
+        const setId = `${fechaIso}|${escala}|${startMin}|${uniqueVuelos.join(',')}`
+
+        if (!reportedSets.has(setId)) {
+          reportedSets.add(setId)
+
+          const hh1 = String(Math.floor(startMin / 60) % 24).padStart(2, '0')
+          const mm1 = String(startMin % 60).padStart(2, '0')
+
+          const endMinInclusive = endMin - 1
+          const hh2 = String(Math.floor(endMinInclusive / 60) % 24).padStart(2, '0')
+          const mm2 = String(endMinInclusive % 60).padStart(2, '0')
+
+          simultaneidadMasCuatro.push({
+            fechaIso,
+            fecha: format(parse(fechaIso, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy'),
+            escala,
+            franjaHoraria: `${hh1}:${mm1}–${hh2}:${mm2}`,
+            cantidadVuelos: inWindow.length,
+            vuelos: uniqueVuelos,
+          })
+        }
       }
-    })
+    }
+  }
+
+  simultaneidadMasCuatro.sort((a, b) => {
+    if (a.fechaIso !== b.fechaIso) return a.fechaIso.localeCompare(b.fechaIso)
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.franjaHoraria.localeCompare(b.franjaHoraria)
+  })
 
   return {
     totalFilasDatos,

@@ -50,13 +50,11 @@ export const simultaneityRule: OperationalRule = {
       if (!h) return
       const fecha = getCell(row, mapping, 'fecha')
       const hi = getCell(row, mapping, 'hora_inicio')
-      const hf = mapping.hora_fin ? getCell(row, mapping, 'hora_fin') : hi
       const startD = combineDayAndTime(fecha, hi ?? fecha)
-      const endD = combineDayAndTime(fecha, hf ?? hi ?? fecha)
-      if (!startD || !endD || !coerceToDate(fecha)) return
+      if (!startD || !coerceToDate(fecha)) return
       const start = startD.getTime()
-      let end = endD.getTime()
-      if (end < start) end = start
+      // Se consideran simultáneos los vuelos que están dentro de los 60 minutos
+      const end = start + 60 * 60 * 1000
       const list = byHandler.get(h) ?? []
       list.push({
         start,
