@@ -206,6 +206,7 @@ export default function App() {
               >
                 Análisis costos
               </button>
+              {/*
               <button
                 type="button"
                 onClick={() => setMainTab('casoitc')}
@@ -228,6 +229,7 @@ export default function App() {
               >
                 Comparativa FB / ITC
               </button>
+              */}
             </>
           )}
           <button
