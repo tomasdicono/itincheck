@@ -25,6 +25,11 @@ const ITC_VENTANAS: Record<string, { startMin: number; endMin: number }> = {
   NQN: { startMin: 6 * 60, endMin: 22 * 60 },
 }
 
+const ESCALAS_50MIN = new Set([
+  'BRC', 'COR', 'CPC', 'CRD', 'IGR', 'FTE', 'MDZ', 'NQN', 'REL',
+  'RES', 'TUC', 'SLA', 'USH', 'UAQ', 'SDE', 'JUJ', 'PSS'
+])
+
 export type ProgrammingReport = {
   totalFilasDatos: number
   meses: { mes: string; etiqueta: string }[]
@@ -73,6 +78,13 @@ export type ProgrammingReport = {
     fecha: string
     escala: string
     /** Franja por hora entera, p. ej. 14:00–14:59 */
+    franjaHoraria: string
+    cantidadVuelos: number
+    vuelos: string[]
+  }[]
+  simultaneidadEscalas50Min: {
+    fecha: string
+    escala: string
     franjaHoraria: string
     cantidadVuelos: number
     vuelos: string[]
@@ -450,12 +462,23 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     vuelos: string[]
   }[] = []
 
+  const simultaneidadEscalas50Min: {
+    fechaIso: string
+    fecha: string
+    escala: string
+    franjaHoraria: string
+    cantidadVuelos: number
+    vuelos: string[]
+  }[] = []
+
   const reportedSets = new Set<string>()
+  const reportedEscalasSets = new Set<string>()
 
   for (const [key, flights] of flightsPerDayEscala.entries()) {
     const [fechaIso, escala] = key.split('|')
     flights.sort((a, b) => a.minutos - b.minutos)
 
+    // Calculate general >4 flights concurrency in 60 minutes
     for (let i = 0; i < flights.length; i++) {
       const startMin = flights[i].minutos
       // Ventana de 60 minutos: inclusive desde startMin hasta startMin + 59
@@ -488,9 +511,51 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
         }
       }
     }
+
+    // Calculate >2 flights concurrency in 50 minutes for restricted scales
+    if (ESCALAS_50MIN.has(escala)) {
+      for (let i = 0; i < flights.length; i++) {
+        const startMin = flights[i].minutos
+        // Ventana de 50 minutos: inclusive desde startMin hasta startMin + 49
+        const endMin = startMin + 50
+
+        const inWindow = flights.filter((f) => f.minutos >= startMin && f.minutos < endMin)
+        if (inWindow.length > 2) {
+          const vuelosEnVentana = inWindow.map((f) => f.vuelo).filter((v) => v !== '—')
+          const uniqueVuelos = [...new Set(vuelosEnVentana)].sort()
+          const setId = `${fechaIso}|${escala}|${uniqueVuelos.join(',')}`
+
+          if (!reportedEscalasSets.has(setId)) {
+            reportedEscalasSets.add(setId)
+
+            const hh1 = String(Math.floor(startMin / 60) % 24).padStart(2, '0')
+            const mm1 = String(startMin % 60).padStart(2, '0')
+
+            const endMinInclusive = endMin - 1
+            const hh2 = String(Math.floor(endMinInclusive / 60) % 24).padStart(2, '0')
+            const mm2 = String(endMinInclusive % 60).padStart(2, '0')
+
+            simultaneidadEscalas50Min.push({
+              fechaIso,
+              fecha: format(parse(fechaIso, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy'),
+              escala,
+              franjaHoraria: `${hh1}:${mm1}–${hh2}:${mm2}`,
+              cantidadVuelos: inWindow.length,
+              vuelos: uniqueVuelos,
+            })
+          }
+        }
+      }
+    }
   }
 
   simultaneidadMasCuatro.sort((a, b) => {
+    if (a.fechaIso !== b.fechaIso) return a.fechaIso.localeCompare(b.fechaIso)
+    if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
+    return a.franjaHoraria.localeCompare(b.franjaHoraria)
+  })
+
+  simultaneidadEscalas50Min.sort((a, b) => {
     if (a.fechaIso !== b.fechaIso) return a.fechaIso.localeCompare(b.fechaIso)
     if (a.escala !== b.escala) return a.escala.localeCompare(b.escala)
     return a.franjaHoraria.localeCompare(b.franjaHoraria)
@@ -515,6 +580,7 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     rankingExtrasItcPorEscala,
     equipamiento: { c320: n320, c321: n321, cotro: notro },
     simultaneidadMasCuatro,
+    simultaneidadEscalas50Min,
   }
 }
 

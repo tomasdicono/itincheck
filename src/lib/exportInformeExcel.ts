@@ -86,6 +86,21 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
   )
   XLSX.utils.book_append_sheet(wb, wsSim, 'Simultaneidad')
 
+  const simEscalasHeader = ['Fecha', 'Escala', 'Franja 50 min', 'Cantidad vuelos', 'Nº de vuelo']
+  const simEscalasRows = report.simultaneidadEscalas50Min.map((r) => [
+    r.fecha,
+    r.escala,
+    r.franjaHoraria,
+    r.cantidadVuelos,
+    r.vuelos.join(', '),
+  ])
+  const wsSimEscalas = XLSX.utils.aoa_to_sheet(
+    simEscalasRows.length
+      ? [simEscalasHeader, ...simEscalasRows]
+      : [simEscalasHeader, ['—', '—', '—', 0, 'Sin franjas con >2 vuelos en 50 min']],
+  )
+  XLSX.utils.book_append_sheet(wb, wsSimEscalas, 'Simultaneidad Escalas (50m)')
+
   const outName = `${base}_informe_${stamp}.xlsx`
   XLSX.writeFile(wb, outName)
 }
