@@ -53,8 +53,11 @@ export const simultaneityRule: OperationalRule = {
       const startD = combineDayAndTime(fecha, hi ?? fecha)
       if (!startD || !coerceToDate(fecha)) return
       const start = startD.getTime()
-      // Se consideran simultáneos los vuelos que están dentro de los 60 minutos
-      const end = start + 60 * 60 * 1000
+      const aeropuerto = String(getCell(row, mapping, 'aeropuerto') ?? '').trim().toUpperCase()
+      const isAepEze = aeropuerto === 'AEP' || aeropuerto === 'EZE'
+      const windowMin = isAepEze ? 60 : 50
+      
+      const end = start + windowMin * 60 * 1000
       const list = byHandler.get(h) ?? []
       list.push({
         start,

@@ -662,9 +662,9 @@ export default function App() {
                     Simultaneidad alta
                   </h3>
                   <div className="mt-2 max-h-80 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
-                    {programmingReport.simultaneidadMasCuatro.length === 0 ? (
+                    {programmingReport.simultaneidadAlta.length === 0 ? (
                       <p className="px-4 py-3 text-sm text-[color:var(--color-muted)]">
-                        No hay franjas con más de 4 vuelos simultáneos en la misma hora, día y escala.
+                        No hay franjas de alta simultaneidad (&gt;4 vuelos en AEP/EZE o &gt;1 en el resto).
                       </p>
                     ) : (
                       <table className="min-w-full text-left text-sm">
@@ -678,51 +678,7 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {programmingReport.simultaneidadMasCuatro.map((row, i) => (
-                            <tr
-                              key={`${row.fecha}-${row.escala}-${row.franjaHoraria}-${i}`}
-                              className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"
-                            >
-                              <td className="px-3 py-2">{row.fecha}</td>
-                              <td className="px-3 py-2 font-mono font-bold">{row.escala}</td>
-                              <td className="px-3 py-2 font-bold">{row.franjaHoraria}</td>
-                              <td className="px-3 py-2 text-right font-black tabular-nums">
-                                {row.cantidadVuelos.toLocaleString('es-AR')}
-                              </td>
-                              <td className="px-3 py-2 text-xs">{row.vuelos.join(', ') || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[color:var(--color-brand-celeste-muted)]">
-                    Simultaneidad en escalas (50 min)
-                  </h3>
-                  <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                    Muestra los días en los que se registran más de 2 vuelos en una ventana de 50 minutos en aeropuertos con restricción (capacidad: 1 vuelo cada 50 min).
-                  </p>
-                  <div className="mt-2 max-h-80 overflow-auto rounded-2xl border border-[color:var(--color-line)]">
-                    {programmingReport.simultaneidadEscalas50Min.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-[color:var(--color-muted)]">
-                        No se detectaron franjas con más de 2 vuelos en 50 minutos para las escalas restringidas.
-                      </p>
-                    ) : (
-                      <table className="min-w-full text-left text-sm">
-                        <thead className="sticky top-0 bg-[color:var(--color-table-head)] text-[color:var(--color-muted)]">
-                          <tr>
-                            <th className="px-3 py-2.5 font-bold">Fecha</th>
-                            <th className="px-3 py-2.5 font-bold">Escala</th>
-                            <th className="px-3 py-2.5 font-bold">Franja (50 min)</th>
-                            <th className="px-3 py-2.5 text-right font-bold">Vuelos</th>
-                            <th className="px-3 py-2.5 font-bold">Nº de vuelo</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {programmingReport.simultaneidadEscalas50Min.map((row, i) => (
+                          {programmingReport.simultaneidadAlta.map((row, i) => (
                             <tr
                               key={`${row.fecha}-${row.escala}-${row.franjaHoraria}-${i}`}
                               className="border-t border-[color:var(--color-line)] odd:bg-[color:var(--color-page)]/40"

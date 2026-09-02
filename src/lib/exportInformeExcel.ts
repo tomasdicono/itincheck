@@ -8,7 +8,7 @@ function safeFileBase(name: string | null | undefined): string {
 }
 
 /**
- * Genera un .xlsx: mismo minuto, horas extra ITC, ranking por escala y simultaneidad &gt;4/hora.
+ * Genera un .xlsx: mismo minuto, horas extra ITC, ranking por escala y simultaneidad alta.
  */
 export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: string | null): void {
   const wb = XLSX.utils.book_new()
@@ -74,7 +74,7 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
   XLSX.utils.book_append_sheet(wb, wsRank, 'Ranking ITC')
 
   const simHeader = ['Fecha', 'Escala', 'Franja horaria', 'Cantidad vuelos', 'Nº de vuelo']
-  const simRows = report.simultaneidadMasCuatro.map((r) => [
+  const simRows = report.simultaneidadAlta.map((r) => [
     r.fecha,
     r.escala,
     r.franjaHoraria,
@@ -82,24 +82,9 @@ export function downloadInformeExcel(report: ProgrammingReport, sourceFileName: 
     r.vuelos.join(', '),
   ])
   const wsSim = XLSX.utils.aoa_to_sheet(
-    simRows.length ? [simHeader, ...simRows] : [simHeader, ['—', '—', '—', 0, 'Sin franjas con >4 vuelos']],
+    simRows.length ? [simHeader, ...simRows] : [simHeader, ['—', '—', '—', 0, 'Sin franjas de simultaneidad alta']],
   )
   XLSX.utils.book_append_sheet(wb, wsSim, 'Simultaneidad')
-
-  const simEscalasHeader = ['Fecha', 'Escala', 'Franja 50 min', 'Cantidad vuelos', 'Nº de vuelo']
-  const simEscalasRows = report.simultaneidadEscalas50Min.map((r) => [
-    r.fecha,
-    r.escala,
-    r.franjaHoraria,
-    r.cantidadVuelos,
-    r.vuelos.join(', '),
-  ])
-  const wsSimEscalas = XLSX.utils.aoa_to_sheet(
-    simEscalasRows.length
-      ? [simEscalasHeader, ...simEscalasRows]
-      : [simEscalasHeader, ['—', '—', '—', 0, 'Sin franjas con >2 vuelos en 50 min']],
-  )
-  XLSX.utils.book_append_sheet(wb, wsSimEscalas, 'Simultaneidad Escalas (50m)')
 
   const outName = `${base}_informe_${stamp}.xlsx`
   XLSX.writeFile(wb, outName)
