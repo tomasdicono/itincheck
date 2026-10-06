@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { CasoItcTab } from './components/CasoItcTab'
 import { ComparativaFbItcTab } from './components/ComparativaFbItcTab'
 import { CostAnalysisTab } from './components/CostAnalysisTab'
+import { HheeBueTab } from './components/HheeBueTab'
 import { TariffsTab } from './components/TariffsTab'
 import { DualMoneyTotal } from './components/DualMoneyTotal'
 import { useBcraValuacionUsd } from './hooks/useBcraValuacionUsd'
@@ -32,9 +33,9 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedAirports, setSelectedAirports] = useState<string[]>([])
-  const [mainTab, setMainTab] = useState<'operativo' | 'costos' | 'casoitc' | 'comparativafbitc' | 'tarifarios'>(
-    'tarifarios',
-  )
+  const [mainTab, setMainTab] = useState<
+    'operativo' | 'costos' | 'casoitc' | 'comparativafbitc' | 'tarifarios' | 'hheebue'
+  >('tarifarios')
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return
@@ -243,11 +244,28 @@ export default function App() {
           >
             Tarifarios
           </button>
+          <button
+            type="button"
+            onClick={() => setMainTab('hheebue')}
+            className={`rounded-full px-5 py-2.5 text-sm font-black transition ${
+              mainTab === 'hheebue'
+                ? 'bg-gradient-to-r from-[color:var(--color-brand-teal)] to-[color:var(--color-brand-celeste)] text-white shadow-sm'
+                : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-page)]'
+            }`}
+          >
+            HH:EE BUE
+          </button>
         </div>
 
         {mainTab === 'tarifarios' && (
           <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
             <TariffsTab />
+          </section>
+        )}
+
+        {mainTab === 'hheebue' && (
+          <section className="js-card rounded-3xl border border-[color:var(--color-line)] bg-white p-6">
+            <HheeBueTab />
           </section>
         )}
 
