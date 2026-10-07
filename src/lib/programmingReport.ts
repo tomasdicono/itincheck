@@ -29,6 +29,8 @@ export type ProgrammingReport = {
   totalFilasDatos: number
   meses: { mes: string; etiqueta: string }[]
   tablaEscalaPorMes: { escala: string; cantidadesPorMes: number[]; total: number }[]
+  /** Suma de todas las escalas por mes (fila Total del mes). */
+  totalesEscalaPorMes: { cantidadesPorMes: number[]; total: number }
   vuelosMismoMinuto: {
     fecha: string
     escala: string
@@ -380,6 +382,11 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     return { escala, cantidadesPorMes, total }
   })
 
+  const totalesEscalaPorMes = {
+    cantidadesPorMes: porMes.map(({ cantidad }) => cantidad),
+    total: totalFilasDatos,
+  }
+
   const vuelosMismoMinuto = [...minuteGroups.values()]
     .filter((g) => g.cantidad >= 2)
     .map((g) => ({
@@ -503,6 +510,7 @@ export function buildProgrammingReport(rawMatrix: unknown[][]): ProgrammingRepor
     totalFilasDatos,
     meses,
     tablaEscalaPorMes,
+    totalesEscalaPorMes,
     vuelosMismoMinuto,
     extrasFueraItc: extrasFueraItc.map((row) => ({
       fecha: row.fecha,

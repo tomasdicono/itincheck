@@ -478,6 +478,24 @@ export default function App() {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="sticky bottom-0 z-20 bg-[color:var(--color-table-head)] font-bold shadow-[0_-6px_16px_-4px_rgba(0,0,0,0.08)]">
+                        <tr>
+                          <td className="sticky left-0 z-10 border-t-2 border-[color:var(--color-line)] bg-[color:var(--color-table-head)] px-3 py-3">
+                            Total del mes
+                          </td>
+                          {programmingReport.totalesEscalaPorMes.cantidadesPorMes.map((cantidad, i) => (
+                            <td
+                              key={`total-mes-${programmingReport.meses[i]?.mes ?? i}`}
+                              className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right font-black tabular-nums"
+                            >
+                              {cantidad.toLocaleString('es-AR')}
+                            </td>
+                          ))}
+                          <td className="border-t-2 border-[color:var(--color-line)] px-3 py-3 text-right font-black tabular-nums">
+                            {programmingReport.totalesEscalaPorMes.total.toLocaleString('es-AR')}
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
